@@ -1,1053 +1,298 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>大型多场馆立体展览馆</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>真实风展览馆（可走动）</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
+        *{box-sizing:border-box;margin:0;padding:0}
+        html,body{width:100%;height:100%}
+        body{
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #1a2a3a;
-            overflow: hidden;
-            color: #fff;
+            background:#0b0f12;color:#fff;overflow:hidden
         }
-        
-        #container {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-        }
-        
-        #ui {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            padding: 20px;
-            z-index: 100;
-            pointer-events: none;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            color: #fff;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-        
-        .subtitle {
-            font-size: 1.2rem;
-            color: #bdc3c7;
-        }
-        
-        .controls {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 10px;
-            padding: 15px;
-            max-width: 300px;
-            margin: 0 auto;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            pointer-events: auto;
-            color: #333;
-        }
-        
-        .control-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        
-        .key {
-            display: inline-block;
-            background: #333;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            margin-right: 10px;
-            min-width: 40px;
-            text-align: center;
-            font-weight: bold;
-        }
-        
-        #startButton {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            background: #4a6ee0;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: background 0.3s;
-        }
-        
-        #startButton:hover {
-            background: #3a5ec0;
-        }
-        
-        .mobile-controls {
-            display: none;
-            position: absolute;
-            bottom: 20px;
-            width: 100%;
-            justify-content: space-between;
-            padding: 0 20px;
-            pointer-events: auto;
-        }
-        
-        .joystick {
-            width: 120px;
-            height: 120px;
-            background: rgba(255, 255, 255, 0.7);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        
-        .joystick-inner {
-            width: 60px;
-            height: 60px;
-            background: rgba(74, 110, 224, 0.8);
-            border-radius: 50%;
-        }
-        
-        .action-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        
-        .action-button {
-            width: 70px;
-            height: 70px;
-            background: rgba(255, 255, 255, 0.7);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 1.2rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        
-        .crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 20px;
-            height: 20px;
-            z-index: 10;
-            pointer-events: none;
-        }
-        
-        .crosshair::before, .crosshair::after {
-            content: '';
-            position: absolute;
-            background: rgba(255, 255, 255, 0.8);
-        }
-        
-        .crosshair::before {
-            width: 2px;
-            height: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-        
-        .crosshair::after {
-            width: 20px;
-            height: 2px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-        
-        .floor-indicator {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px 15px;
-            border-radius: 5px;
-            font-size: 1rem;
-            pointer-events: none;
-        }
-        
-        .elevator-panel {
-            position: absolute;
-            top: 50%;
-            right: 20px;
-            transform: translateY(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            border-radius: 10px;
-            display: none;
-            pointer-events: auto;
-        }
-        
-        .elevator-btn {
-            width: 50px;
-            height: 50px;
-            background: #4a6ee0;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            margin: 5px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        
-        .elevator-btn:hover {
-            background: #3a5ec0;
-        }
-        
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 2rem;
-            }
-            
-            .subtitle {
-                font-size: 1rem;
-            }
-            
-            .mobile-controls {
-                display: flex;
-            }
-            
-            .elevator-panel {
-                right: 10px;
-                padding: 10px;
-            }
-            
-            .elevator-btn {
-                width: 40px;
-                height: 40px;
-                font-size: 1rem;
-            }
-        }
+        #container{position:absolute;inset:0}
+        #ui{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:200;pointer-events:auto}
+        .menu{background:rgba(255,255,255,0.95);color:#222;padding:20px;border-radius:12px;min-width:320px;box-shadow:0 10px 30px rgba(0,0,0,0.4)}
+        h1{font-size:1.5rem;margin-bottom:6px}
+        p.sub{color:#555;margin-bottom:12px}
+        .hall-buttons{display:flex;flex-wrap:wrap;gap:10px}
+        .btn{flex:1;padding:10px 12px;border-radius:8px;border:none;background:#2b6be6;color:#fff;font-weight:600;cursor:pointer}
+        .btn.secondary{background:#4a4a4a}
+        #help{position:absolute;left:16px;bottom:16px;background:rgba(0,0,0,0.6);padding:8px 12px;border-radius:8px;pointer-events:none}
+        .cross{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:24px;height:24px;pointer-events:none;z-index:150}
+        .cross:before,.cross:after{content:'';position:absolute;background:rgba(255,255,255,0.9)}
+        .cross:before{height:2px;width:24px;left:0;top:11px}
+        .cross:after{width:2px;height:24px;left:11px;top:0}
+        #logo{position:absolute;right:20px;top:20px;background:rgba(255,255,255,0.06);padding:8px 12px;border-radius:8px}
+        @media (max-width:768px){.menu{min-width:260px}}
     </style>
 </head>
 <body>
     <div id="container"></div>
-    
+
     <div id="ui">
-        <div class="header">
-            <h1>大型多场馆立体展览馆</h1>
-            <p class="subtitle">使用WASD移动，鼠标控制视角 - 可进入所有展厅</p>
-        </div>
-        
-        <div class="controls">
-            <div class="control-item">
-                <span class="key">W</span>
-                <span>前进</span>
+        <div class="menu" id="menu">
+            <h1>博物馆入口</h1>
+            <p class="sub">WASD 移动 · 鼠标转头 · 空格跳跃 · Esc 返回菜单</p>
+            <div style="margin-bottom:10px">选择要直接前往的展厅（或在大厅自然行走）：</div>
+            <div class="hall-buttons">
+                <button class="btn" data-target="modern">现代艺术馆</button>
+                <button class="btn" data-target="classical">古典艺术馆</button>
+                <button class="btn" data-target="abstract">抽象艺术馆</button>
+                <button class="btn" data-target="digital">数字艺术馆</button>
             </div>
-            <div class="control-item">
-                <span class="key">S</span>
-                <span>后退</span>
+            <div style="margin-top:12px;display:flex;gap:8px">
+                <button id="enterBtn" class="btn">进入大厅（漫步体验）</button>
+                <button id="closeBtn" class="btn secondary">关闭菜单</button>
             </div>
-            <div class="control-item">
-                <span class="key">A</span>
-                <span>左移</span>
-            </div>
-            <div class="control-item">
-                <span class="key">D</span>
-                <span>右移</span>
-            </div>
-            <div class="control-item">
-                <span class="key">鼠标</span>
-                <span>控制视角</span>
-            </div>
-            <div class="control-item">
-                <span class="key">空格</span>
-                <span>跳跃</span>
-            </div>
-            <div class="control-item">
-                <span class="key">E</span>
-                <span>使用电梯</span>
-            </div>
-            
-            <button id="startButton">进入展览馆</button>
         </div>
     </div>
-    
-    <div class="mobile-controls">
-        <div class="joystick" id="joystick">
-            <div class="joystick-inner"></div>
-        </div>
-        <div class="action-buttons">
-            <div class="action-button" id="jumpButton">跳</div>
-        </div>
-    </div>
-    
-    <div class="floor-indicator" id="floorIndicator">一楼 - 现代艺术馆</div>
-    
-    <div class="elevator-panel" id="elevatorPanel">
-        <button class="elevator-btn" data-floor="1">1F</button>
-        <button class="elevator-btn" data-floor="2">2F</button>
-    </div>
-    
-    <div class="crosshair"></div>
+
+    <div id="help">WASD · 鼠标 · 空格 · E（互动）</div>
+    <div class="cross"></div>
+    <div id="logo">真实风展览馆样例</div>
 
     <script>
-        // 检测移动设备
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        
-        // 初始化变量
-        let camera, scene, renderer, controls;
-        let moveForward = false;
-        let moveBackward = false;
-        let moveLeft = false;
-        let moveRight = false;
-        let canJump = false;
-        let prevTime = performance.now();
-        const velocity = new THREE.Vector3();
-        const direction = new THREE.Vector3();
-        
-        // 碰撞检测相关变量
-        let collisionObjects = [];
-        const playerRadius = 0.5; // 减小玩家半径
-        const playerHeight = 5; // 减小玩家高度
-        
-        // 楼层和展厅管理
-        let currentFloor = 1;
-        const floors = {
-            1: { name: "一楼 - 现代艺术馆", y: 5 },
-            2: { name: "二楼 - 古典艺术馆", y: 25 }
-        };
-        
-        // 电梯位置
-        const elevatorPosition = new THREE.Vector3(35, 0, 0);
-        let nearElevator = false;
-        
-        // 初始化场景
-        function init() {
-            // 创建场景
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xf0f0f0);
-            scene.fog = new THREE.Fog(0xf0f0f0, 0, 200);
-            
-            // 创建相机
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 5, 20); // 调整初始位置
-            
-            // 创建灯光
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
-            
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(50, 100, 50);
-            directionalLight.castShadow = true;
-            scene.add(directionalLight);
-            
-            // 创建渲染器
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            document.getElementById('container').appendChild(renderer.domElement);
-            
-            // 创建控制器
-            controls = new THREE.PointerLockControls(camera, document.body);
-            
-            // 创建展览馆结构
-            createExhibitionHall();
-            
-            // 事件监听
-            document.getElementById('startButton').addEventListener('click', function() {
-                controls.lock();
-            });
-            
-            controls.addEventListener('lock', function() {
-                document.getElementById('ui').style.display = 'none';
-            });
-            
-            controls.addEventListener('unlock', function() {
-                document.getElementById('ui').style.display = 'block';
-            });
-            
-            // 键盘控制
-            document.addEventListener('keydown', onKeyDown);
-            document.addEventListener('keyup', onKeyUp);
-            
-            // 电梯按钮事件
-            document.querySelectorAll('.elevator-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const floor = parseInt(this.getAttribute('data-floor'));
-                    changeFloor(floor);
-                });
-            });
-            
-            // 窗口大小调整
-            window.addEventListener('resize', onWindowResize);
-            
-            // 移动设备控制
-            if (isMobile) {
-                setupMobileControls();
-            }
-            
-            // 更新楼层指示器
-            updateFloorIndicator();
-        }
-        
-        // 创建展览馆结构
-        function createExhibitionHall() {
-            // 创建一楼
-            createFirstFloor();
-            
-            // 创建二楼
-            createSecondFloor();
-            
-            // 添加电梯
-            createElevator();
-        }
-        
-        // 创建一楼 - 现代艺术馆
-        function createFirstFloor() {
-            // 地面
-            const floorGeometry = new THREE.PlaneGeometry(200, 200);
-            const floorMaterial = new THREE.MeshPhongMaterial({ 
-                color: 0xffffff, 
-                shininess: 0 
-            });
-            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-            floor.rotation.x = -Math.PI / 2;
-            floor.receiveShadow = true;
-            scene.add(floor);
-            
-            // 创建多个展厅 - 使用开放式设计
-            createOpenGalleryRoom(-40, 0, 0, "现代艺术", 0x3498db);
-            createOpenGalleryRoom(40, 0, 0, "抽象艺术", 0xe74c3c);
-            createOpenGalleryRoom(0, 0, -40, "数字艺术", 0x2ecc71);
-            createOpenGalleryRoom(0, 0, 40, "装置艺术", 0xf39c12);
-            
-            // 中央大厅
-            createCentralHall();
-        }
-        
-        // 创建二楼 - 古典艺术馆
-        function createSecondFloor() {
-            // 二楼地面
-            const secondFloorGeometry = new THREE.PlaneGeometry(180, 180);
-            const secondFloorMaterial = new THREE.MeshPhongMaterial({ 
-                color: 0xf8f8f8
-            });
-            const secondFloor = new THREE.Mesh(secondFloorGeometry, secondFloorMaterial);
-            secondFloor.position.y = 20;
-            secondFloor.rotation.x = -Math.PI / 2;
-            secondFloor.receiveShadow = true;
-            scene.add(secondFloor);
-            
-            // 二楼展厅 - 开放式设计
-            createOpenClassicalGalleryRoom(-35, 20, -35, "文艺复兴", 0x8b7355);
-            createOpenClassicalGalleryRoom(35, 20, -35, "巴洛克", 0x6b5a3c);
-            createOpenClassicalGalleryRoom(-35, 20, 35, "印象派", 0x3498db);
-            createOpenClassicalGalleryRoom(35, 20, 35, "立体主义", 0x9b59b6);
-            
-            // 二楼中央观景台
-            createViewingDeck();
-        }
-        
-        // 创建开放式现代艺术展厅
-        function createOpenGalleryRoom(x, y, z, name, color) {
-            const roomGroup = new THREE.Group();
-            roomGroup.position.set(x, y, z);
-            
-            // 只创建部分墙壁，留出入口
-            const wallMaterial = new THREE.MeshPhongMaterial({ 
-                color: 0xffffff,
-                transparent: true,
-                opacity: 0.8
-            });
-            
-            // 后墙
-            const backWallGeometry = new THREE.BoxGeometry(30, 20, 1);
-            const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
-            backWall.position.set(0, 10, -15);
-            backWall.castShadow = true;
-            roomGroup.add(backWall);
-            
-            // 侧墙（不完整，留出空间）
-            const leftWallGeometry = new THREE.BoxGeometry(1, 20, 14);
-            const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
-            leftWall.position.set(-15, 10, -8);
-            leftWall.castShadow = true;
-            roomGroup.add(leftWall);
-            
-            const rightWallGeometry = new THREE.BoxGeometry(1, 20, 14);
-            const rightWall = new THREE.Mesh(rightWallGeometry, wallMaterial);
-            rightWall.position.set(15, 10, -8);
-            rightWall.castShadow = true;
-            roomGroup.add(rightWall);
-            
-            // 添加立体画框
-            add3DFrames(roomGroup, color);
-            
-            scene.add(roomGroup);
-            
-            // 只将实心墙壁添加到碰撞检测
-            collisionObjects.push({
-                type: 'wall',
-                mesh: backWall,
-                position: new THREE.Vector3(x, y + 10, z - 15),
-                width: 30,
-                height: 20,
-                depth: 1
-            });
-            
-            collisionObjects.push({
-                type: 'wall',
-                mesh: leftWall,
-                position: new THREE.Vector3(x - 15, y + 10, z - 8),
-                width: 1,
-                height: 20,
-                depth: 14
-            });
-            
-            collisionObjects.push({
-                type: 'wall',
-                mesh: rightWall,
-                position: new THREE.Vector3(x + 15, y + 10, z - 8),
-                width: 1,
-                height: 20,
-                depth: 14
-            });
-        }
-        
-        // 创建开放式古典艺术展厅
-        function createOpenClassicalGalleryRoom(x, y, z, name, color) {
-            const roomGroup = new THREE.Group();
-            roomGroup.position.set(x, y, z);
-            
-            // 古典风格墙壁
-            const wallMaterial = new THREE.MeshPhongMaterial({ 
-                color: 0xf5f5dc
-            });
-            
-            // 后墙
-            const backWallGeometry = new THREE.BoxGeometry(25, 15, 1);
-            const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
-            backWall.position.set(0, 7.5, -12.5);
-            backWall.castShadow = true;
-            roomGroup.add(backWall);
-            
-            // 添加古典风格画框
-            addClassicalFrames(roomGroup, color);
-            
-            scene.add(roomGroup);
-            
-            // 添加到碰撞检测
-            collisionObjects.push({
-                type: 'wall',
-                mesh: backWall,
-                position: new THREE.Vector3(x, y + 7.5, z - 12.5),
-                width: 25,
-                height: 15,
-                depth: 1
-            });
-        }
-        
-        // 添加立体画框
-        function add3DFrames(roomGroup, color) {
-            const framePositions = [
-                [-12, 8, -14.8], [12, 8, -14.8], // 后墙上的画
-                [-14.8, 8, -12], [-14.8, 8, 12], [14.8, 8, -12], [14.8, 8, 12] // 侧墙上的画
-            ];
-            
-            framePositions.forEach(pos => {
-                // 创建立体画框
-                const frameGroup = new THREE.Group();
-                
-                // 画框外框
-                const frameGeometry = new THREE.BoxGeometry(5, 7, 0.3);
-                const frameMaterial = new THREE.MeshPhongMaterial({ color: 0x8b7355 });
-                const frame = new THREE.Mesh(frameGeometry, frameMaterial);
-                
-                // 画作
-                const paintingGeometry = new THREE.BoxGeometry(4.5, 6.5, 0.2);
-                const paintingMaterial = new THREE.MeshPhongMaterial({ 
-                    color: new THREE.Color().setHSL(Math.random(), 0.7, 0.6)
-                });
-                const painting = new THREE.Mesh(paintingGeometry, paintingMaterial);
-                painting.position.z = 0.15;
-                
-                frameGroup.add(frame);
-                frameGroup.add(painting);
-                frameGroup.position.set(pos[0], pos[1], pos[2]);
-                
-                // 根据位置调整朝向
-                if (Math.abs(pos[0]) > 14) {
-                    frameGroup.rotation.y = pos[0] > 0 ? -Math.PI / 2 : Math.PI / 2;
-                } else {
-                    frameGroup.rotation.y = Math.PI; // 后墙的画朝向房间内部
+    // ---------- 基本变量 ----------
+    let camera, scene, renderer, controls;
+    let moveForward=false, moveBackward=false, moveLeft=false, moveRight=false;
+    let canJump=false, velocity=new THREE.Vector3(), direction=new THREE.Vector3();
+    let prevTime=performance.now();
+    const playerRadius=0.6, playerHeight=1.8;
+
+    const container=document.getElementById('container');
+
+    // 碰撞对象（盒子/圆柱）
+    const collisionObjects=[];
+
+    // 初始化
+    init();
+    animate();
+
+    function init(){
+        scene=new THREE.Scene();
+        scene.background=new THREE.Color(0x0b0f12);
+
+        camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,1000);
+        camera.position.set(0,1.8,8);
+
+        // renderer
+        renderer=new THREE.WebGLRenderer({antialias:true});
+        renderer.setSize(window.innerWidth,window.innerHeight);
+        renderer.shadowMap.enabled=true;
+        container.appendChild(renderer.domElement);
+
+        // lights - 多光源营造不同空间质感
+        const amb=new THREE.HemisphereLight(0xffffff,0x444444,0.5); scene.add(amb);
+        const dir=new THREE.DirectionalLight(0xffffff,0.8); dir.position.set(5,20,10); dir.castShadow=true; scene.add(dir);
+
+        // 地面 - 大厅大理石
+        const hallFloor=new THREE.Mesh(
+            new THREE.PlaneGeometry(120,120),
+            new THREE.MeshStandardMaterial({color:0xf4f4f6,roughness:0.4,metalness:0.02})
+        );
+        hallFloor.rotation.x=-Math.PI/2; hallFloor.receiveShadow=true; scene.add(hallFloor);
+
+        // 中央大厅装饰
+        createCentralHall();
+
+        // 4 个展厅（实体入口）
+        createGalleryWithEntrance('modern', 0, 0, -32, {title:'现代艺术馆', color:0x2d6cdf, ambient:0x9fc3ff});
+        createGalleryWithEntrance('abstract', -32, 0, 0, {title:'抽象艺术馆', color:0xe85a5a, ambient:0xffb6b6});
+        createGalleryWithEntrance('digital', 32, 0, 0, {title:'数字艺术馆', color:0x2ecc71, ambient:0x9df0b0});
+        createGalleryWithEntrance('classical', 0, 0, 32, {title:'古典艺术馆', color:0xd4af37, ambient:0xfff0c2});
+
+        // pointer lock controls
+        controls=new THREE.PointerLockControls(camera, document.body);
+
+        // 事件绑定 - 菜单按钮
+        document.querySelectorAll('.btn[data-target]').forEach(b=>{
+            b.addEventListener('click',()=>{
+                const t=b.getAttribute('data-target');
+                // 快速传送到展厅入口前，保留漫步体验
+                const ent=scene.getObjectByName('entrance_'+t);
+                if(ent){
+                    controls.getObject().position.set(ent.position.x,1.8,ent.position.z+4);
+                    controls.getObject().lookAt(ent.position.x,1.8,ent.position.z);
                 }
-                
-                roomGroup.add(frameGroup);
-                
-                // 添加到碰撞检测
-                collisionObjects.push({
-                    type: 'frame',
-                    mesh: frameGroup,
-                    position: new THREE.Vector3(
-                        roomGroup.position.x + pos[0],
-                        roomGroup.position.y + pos[1],
-                        roomGroup.position.z + pos[2]
-                    ),
-                    width: 5,
-                    height: 7,
-                    depth: 0.5
-                });
+                lockAndHideMenu();
             });
+        });
+
+        document.getElementById('enterBtn').addEventListener('click', ()=>{ lockAndHideMenu(); });
+        document.getElementById('closeBtn').addEventListener('click', ()=>{ document.getElementById('ui').style.display='none'; controls.lock(); });
+
+        controls.addEventListener('lock', ()=>{ document.getElementById('ui').style.display='none'; });
+        controls.addEventListener('unlock', ()=>{ document.getElementById('ui').style.display='block'; });
+
+        // 键盘事件
+        document.addEventListener('keydown', onKeyDown);
+        document.addEventListener('keyup', onKeyUp);
+
+        window.addEventListener('resize', onWindowResize);
+
+        // 鼠标Esc返回菜单：当解除锁定，菜单显示（PointerLockControls 默认 Esc 解锁）
+    }
+
+    function lockAndHideMenu(){ controls.lock(); document.getElementById('ui').style.display='none'; }
+
+    function createCentralHall(){
+        // 大厅：抬高地面内嵌圆形纹理（用材质变化表现）
+        const ring=new THREE.Mesh(new THREE.RingGeometry(6,10,64), new THREE.MeshStandardMaterial({color:0x222a33,side:THREE.DoubleSide,roughness:0.5}));
+        ring.rotation.x=-Math.PI/2; ring.position.y=0.01; scene.add(ring);
+
+        // 中央雕塑（抽象）
+        const geom=new THREE.TorusKnotGeometry(2,0.4,128,12); const mat=new THREE.MeshStandardMaterial({color:0x9aa6ad,metalness:0.6,roughness:0.3});
+        const sculpture=new THREE.Mesh(geom,mat); sculpture.position.set(0,2.3,0); sculpture.castShadow=true; scene.add(sculpture);
+        collisionObjects.push({type:'cylinder',position:new THREE.Vector3(0,1.6,0),radius:2.5,height:3});
+
+        // 四个方向的浮动牌（3D板子）
+        createSign(0,2.4,-14,'现代艺术');
+        createSign(-14,2.4,0,'抽象艺术');
+        createSign(14,2.4,0,'数字艺术');
+        createSign(0,2.4,14,'古典艺术');
+    }
+
+    function createSign(x,y,z,text){
+        const plate=new THREE.Mesh(new THREE.BoxGeometry(6,1.2,0.4), new THREE.MeshStandardMaterial({color:0x111827,roughness:0.6}));
+        plate.position.set(x,y,z); plate.castShadow=false; scene.add(plate);
+        // 简单文字效果：用白色平面代表（浏览器内制作Text需要字体资源，简化为平面与小立方作为装饰）
+        const label=new THREE.Mesh(new THREE.BoxGeometry(5.5,0.6,0.01), new THREE.MeshBasicMaterial({color:0xffffff}));
+        label.position.set(x,y+0.01,z+0.21); scene.add(label);
+    }
+
+    // 创建展厅及带开口的墙入口
+    function createGalleryWithEntrance(id, px, py, pz, opts){
+        const roomGroup=new THREE.Group(); roomGroup.name='gallery_'+id; roomGroup.position.set(px,0,pz);
+
+        // 房间地面
+        const floor=new THREE.Mesh(new THREE.PlaneGeometry(24,24), new THREE.MeshStandardMaterial({color:opts.color,roughness:0.6,metalness:0.02}));
+        floor.rotation.x=-Math.PI/2; floor.receiveShadow=true; floor.position.y=0.01; roomGroup.add(floor);
+
+        // 四周墙体（有入口缺口）
+        const wallMat=new THREE.MeshStandardMaterial({color:0xf8f8f8});
+        const wallThickness=0.8, wallHeight=6;
+        // 后墙
+        const backWall=new THREE.Mesh(new THREE.BoxGeometry(24,wallHeight,wallThickness), wallMat);
+        backWall.position.set(0,wallHeight/2,-12+wallThickness/2); roomGroup.add(backWall); collisionObjects.push({type:'box',position:new THREE.Vector3(px+0,wallHeight/2,pz-12+wallThickness/2),width:24,height:wallHeight,depth:wallThickness});
+
+        // 左墙 - 留出中间门洞
+        const leftWallLeft=new THREE.Mesh(new THREE.BoxGeometry(6,wallHeight,wallThickness), wallMat); leftWallLeft.position.set(-9,wallHeight/2,0); roomGroup.add(leftWallLeft); collisionObjects.push({type:'box',position:new THREE.Vector3(px-9,wallHeight/2,pz+0),width:6,height:wallHeight,depth:wallThickness});
+        const leftWallRight=new THREE.Mesh(new THREE.BoxGeometry(6,wallHeight,wallThickness), wallMat); leftWallRight.position.set(-1,wallHeight/2,0); roomGroup.add(leftWallRight); collisionObjects.push({type:'box',position:new THREE.Vector3(px-1,wallHeight/2,pz+0),width:6,height:wallHeight,depth:wallThickness});
+        // 门洞在 x=-4 处留空，玩家可以通过
+
+        // 右墙
+        const rightWallLeft=new THREE.Mesh(new THREE.BoxGeometry(6,wallHeight,wallThickness), wallMat); rightWallLeft.position.set(1,wallHeight/2,0); roomGroup.add(rightWallLeft); collisionObjects.push({type:'box',position:new THREE.Vector3(px+1,wallHeight/2,pz+0),width:6,height:wallHeight,depth:wallThickness});
+        const rightWallRight=new THREE.Mesh(new THREE.BoxGeometry(6,wallHeight,wallThickness), wallMat); rightWallRight.position.set(9,wallHeight/2,0); roomGroup.add(rightWallRight); collisionObjects.push({type:'box',position:new THREE.Vector3(px+9,wallHeight/2,pz+0),width:6,height:wallHeight,depth:wallThickness});
+
+        // 前墙（有门洞对着大厅） - 我们在靠近大厅的一侧留一个大门
+        const frontLeft=new THREE.Mesh(new THREE.BoxGeometry(8,wallHeight,wallThickness), wallMat); frontLeft.position.set(-8,wallHeight/2,12-wallThickness/2); roomGroup.add(frontLeft); collisionObjects.push({type:'box',position:new THREE.Vector3(px-8,wallHeight/2,pz+12-wallThickness/2),width:8,height:wallHeight,depth:wallThickness});
+        const frontRight=new THREE.Mesh(new THREE.BoxGeometry(8,wallHeight,wallThickness), wallMat); frontRight.position.set(8,wallHeight/2,12-wallThickness/2); roomGroup.add(frontRight); collisionObjects.push({type:'box',position:new THREE.Vector3(px+8,wallHeight/2,pz+12-wallThickness/2),width:8,height:wallHeight,depth:wallThickness});
+        // 中间 8 单位作为门洞，允许玩家通过
+
+        // 门楣装饰
+        const arch=new THREE.Mesh(new THREE.BoxGeometry(8,1.2,0.6), new THREE.MeshStandardMaterial({color:0x222222}));
+        arch.position.set(0,4.2,12-0.3); roomGroup.add(arch);
+
+        // 展厅内装饰：几个画框或雕塑，根据风格调整
+        for(let i=0;i<4;i++){
+            const p=new THREE.Mesh(new THREE.BoxGeometry(3,2.2,0.2), new THREE.MeshStandardMaterial({color:0xffffff}));
+            p.position.set(-6 + i*4,1.2,-8);
+            roomGroup.add(p);
+            collisionObjects.push({type:'box',position:new THREE.Vector3(px + (-6 + i*4),1.2,pz-8),width:3,height:2.2,depth:0.2});
         }
-        
-        // 添加古典风格画框
-        function addClassicalFrames(roomGroup, color) {
-            const framePositions = [
-                [-10, 6, -12.4], [10, 6, -12.4], [0, 6, -12.4]
-            ];
-            
-            framePositions.forEach(pos => {
-                const frameGroup = new THREE.Group();
-                
-                // 古典画框（椭圆形）
-                const frameGeometry = new THREE.TorusGeometry(2.5, 0.3, 16, 100, Math.PI * 2);
-                const frameMaterial = new THREE.MeshPhongMaterial({ color: 0xd4af37 });
-                const frame = new THREE.Mesh(frameGeometry, frameMaterial);
-                frame.rotation.x = Math.PI / 2;
-                
-                // 画布
-                const canvasGeometry = new THREE.CircleGeometry(2.2, 32);
-                const canvasMaterial = new THREE.MeshPhongMaterial({ 
-                    color: new THREE.Color().setHSL(Math.random() * 0.1 + 0.5, 0.5, 0.7)
-                });
-                const canvas = new THREE.Mesh(canvasGeometry, canvasMaterial);
-                canvas.rotation.x = -Math.PI / 2;
-                canvas.position.y = 0.1;
-                
-                frameGroup.add(frame);
-                frameGroup.add(canvas);
-                frameGroup.position.set(pos[0], pos[1], pos[2]);
-                frameGroup.rotation.y = Math.PI; // 朝向房间内部
-                
-                roomGroup.add(frameGroup);
-                
-                // 添加到碰撞检测
-                collisionObjects.push({
-                    type: 'frame',
-                    mesh: frameGroup,
-                    position: new THREE.Vector3(
-                        roomGroup.position.x + pos[0],
-                        roomGroup.position.y + pos[1],
-                        roomGroup.position.z + pos[2]
-                    ),
-                    radius: 2.8,
-                    height: 0.6
-                });
-            });
-        }
-        
-        // 创建中央大厅
-        function createCentralHall() {
-            const hallGroup = new THREE.Group();
-            
-            // 大厅地面装饰
-            const floorPatternGeometry = new THREE.CircleGeometry(15, 32);
-            const floorPatternMaterial = new THREE.MeshPhongMaterial({ 
-                color: 0x2c3e50,
-                transparent: true,
-                opacity: 0.3
-            });
-            const floorPattern = new THREE.Mesh(floorPatternGeometry, floorPatternMaterial);
-            floorPattern.rotation.x = -Math.PI / 2;
-            floorPattern.position.y = 0.01;
-            hallGroup.add(floorPattern);
-            
-            // 中央雕塑
-            const sculptureGeometry = new THREE.ConeGeometry(3, 8, 8);
-            const sculptureMaterial = new THREE.MeshPhongMaterial({ color: 0x95a5a6 });
-            const sculpture = new THREE.Mesh(sculptureGeometry, sculptureMaterial);
-            sculpture.position.y = 4;
-            sculpture.castShadow = true;
-            hallGroup.add(sculpture);
-            
-            scene.add(hallGroup);
-            
-            // 添加到碰撞检测
-            collisionObjects.push({
-                type: 'sculpture',
-                mesh: sculpture,
-                position: new THREE.Vector3(0, 4, 0),
-                radius: 3,
-                height: 8
-            });
-        }
-        
-        // 创建观景台
-        function createViewingDeck() {
-            const deckGroup = new THREE.Group();
-            deckGroup.position.y = 20;
-            
-            // 观景台栏杆
-            const railingGeometry = new THREE.TorusGeometry(12, 0.5, 16, 100);
-            const railingMaterial = new THREE.MeshPhongMaterial({ color: 0x7f8c8d });
-            const railing = new THREE.Mesh(railingGeometry, railingMaterial);
-            railing.rotation.x = Math.PI / 2;
-            railing.position.y = 1;
-            deckGroup.add(railing);
-            
-            scene.add(deckGroup);
-            
-            // 添加到碰撞检测
-            collisionObjects.push({
-                type: 'railing',
-                mesh: railing,
-                position: new THREE.Vector3(0, 21, 0),
-                radius: 12,
-                height: 1
-            });
-        }
-        
-        // 创建电梯
-        function createElevator() {
-            const elevatorGroup = new THREE.Group();
-            elevatorGroup.position.copy(elevatorPosition);
-            
-            // 电梯井
-            const shaftGeometry = new THREE.BoxGeometry(6, 40, 6);
-            const shaftMaterial = new THREE.MeshPhongMaterial({ color: 0x34495e });
-            const shaft = new THREE.Mesh(shaftGeometry, shaftMaterial);
-            shaft.position.y = 20;
-            elevatorGroup.add(shaft);
-            
-            // 电梯轿厢（一楼）
-            const cabGeometry = new THREE.BoxGeometry(4, 8, 4);
-            const cabMaterial = new THREE.MeshPhongMaterial({ color: 0xecf0f1 });
-            const cab = new THREE.Mesh(cabGeometry, cabMaterial);
-            cab.position.y = 4;
-            cab.userData.isElevator = true;
-            elevatorGroup.add(cab);
-            
-            scene.add(elevatorGroup);
-            
-            // 添加到碰撞检测
-            collisionObjects.push({
-                type: 'elevator',
-                mesh: cab,
-                position: new THREE.Vector3(
-                    elevatorPosition.x,
-                    elevatorPosition.y + 4,
-                    elevatorPosition.z
-                ),
-                width: 4,
-                height: 8,
-                depth: 4
-            });
-        }
-        
-        // 碰撞检测函数
-        function checkCollision(newPosition) {
-            for (let i = 0; i < collisionObjects.length; i++) {
-                const obj = collisionObjects[i];
-                
-                let collision = false;
-                
-                // 根据对象类型进行不同的碰撞检测
-                if (obj.type === 'wall' || obj.type === 'frame' || obj.type === 'elevator') {
-                    // 长方体碰撞检测
-                    const halfWidth = obj.width / 2;
-                    const halfHeight = obj.height / 2;
-                    const halfDepth = obj.depth / 2;
-                    
-                    // 计算长方体在世界坐标系中的边界
-                    const minX = obj.position.x - halfWidth;
-                    const maxX = obj.position.x + halfWidth;
-                    const minY = obj.position.y - halfHeight;
-                    const maxY = obj.position.y + halfHeight;
-                    const minZ = obj.position.z - halfDepth;
-                    const maxZ = obj.position.z + halfDepth;
-                    
-                    // 检测玩家是否与长方体相交
-                    if (newPosition.x + playerRadius > minX && 
-                        newPosition.x - playerRadius < maxX &&
-                        newPosition.y + playerHeight > minY && 
-                        newPosition.y < maxY &&
-                        newPosition.z + playerRadius > minZ && 
-                        newPosition.z - playerRadius < maxZ) {
-                        collision = true;
-                    }
-                } else if (obj.type === 'sculpture' || obj.type === 'railing') {
-                    // 圆柱体碰撞检测
-                    const dx = newPosition.x - obj.position.x;
-                    const dz = newPosition.z - obj.position.z;
-                    const distance = Math.sqrt(dx * dx + dz * dz);
-                    
-                    if (distance < obj.radius + playerRadius && 
-                        newPosition.y < obj.position.y + obj.height / 2 &&
-                        newPosition.y + playerHeight > obj.position.y - obj.height / 2) {
-                        collision = true;
-                    }
-                }
-                
-                if (collision) {
-                    return true;
-                }
-            }
-            
-            return false;
-        }
-        
-        // 检查是否靠近电梯
-        function checkElevatorProximity() {
-            const playerPos = controls.getObject().position;
-            const distance = playerPos.distanceTo(elevatorPosition);
-            nearElevator = distance < 8;
-            
-            // 显示或隐藏电梯面板
-            const elevatorPanel = document.getElementById('elevatorPanel');
-            elevatorPanel.style.display = nearElevator ? 'block' : 'none';
-        }
-        
-        // 切换楼层
-        function changeFloor(floor) {
-            if (floor === currentFloor) return;
-            
-            currentFloor = floor;
-            const floorInfo = floors[floor];
-            
-            // 移动玩家到新楼层
-            controls.getObject().position.y = floorInfo.y;
-            controls.getObject().position.x = elevatorPosition.x;
-            controls.getObject().position.z = elevatorPosition.z;
-            
-            // 更新楼层指示器
-            updateFloorIndicator();
-            
-            // 隐藏电梯面板
-            document.getElementById('elevatorPanel').style.display = 'none';
-            nearElevator = false;
-        }
-        
-        // 更新楼层指示器
-        function updateFloorIndicator() {
-            const indicator = document.getElementById('floorIndicator');
-            indicator.textContent = floors[currentFloor].name;
-        }
-        
-        // 键盘按下事件
-        function onKeyDown(event) {
-            switch (event.code) {
-                case 'ArrowUp':
-                case 'KeyW':
-                    moveForward = true;
-                    break;
-                    
-                case 'ArrowLeft':
-                case 'KeyA':
-                    moveLeft = true;
-                    break;
-                    
-                case 'ArrowDown':
-                case 'KeyS':
-                    moveBackward = true;
-                    break;
-                    
-                case 'ArrowRight':
-                case 'KeyD':
-                    moveRight = true;
-                    break;
-                    
-                case 'Space':
-                    if (canJump === true) velocity.y += 350;
-                    canJump = false;
-                    break;
-                    
-                case 'KeyE':
-                    if (nearElevator) {
-                        document.getElementById('elevatorPanel').style.display = 'block';
-                    }
-                    break;
+
+        // 名称牌（在门口上方）
+        const namePlate=new THREE.Mesh(new THREE.BoxGeometry(6,0.8,0.2), new THREE.MeshStandardMaterial({color:0x111111}));
+        namePlate.position.set(0,5.2,12-0.25); roomGroup.add(namePlate);
+
+        // 入口标识，便于菜单快速传送
+        const entrance=new THREE.Object3D(); entrance.name='entrance_'+id; entrance.position.set(px,0,pz+12);
+        scene.add(entrance);
+
+        // 根据风格调整内部光照
+        const localLight=new THREE.PointLight(opts.ambient,1.2,40); localLight.position.set(0,5,0); roomGroup.add(localLight);
+
+        scene.add(roomGroup);
+    }
+
+    // 简化碰撞检测（盒/圆柱）
+    function checkCollision(pos){
+        for(let obj of collisionObjects){
+            if(obj.type==='box'){
+                const halfW=obj.width/2, halfH=obj.height/2, halfD=obj.depth/2;
+                const minX=obj.position.x-halfW, maxX=obj.position.x+halfW;
+                const minY=obj.position.y-halfH, maxY=obj.position.y+halfH;
+                const minZ=obj.position.z-halfD, maxZ=obj.position.z+halfD;
+                if(pos.x+playerRadius>minX && pos.x-playerRadius<maxX && pos.y<maxY && pos.y+playerHeight>minY && pos.z+playerRadius>minZ && pos.z-playerRadius<maxZ) return true;
+            } else if(obj.type==='cylinder' || obj.type==='sculpture'){
+                const dx=pos.x-obj.position.x, dz=pos.z-obj.position.z; const dist=Math.sqrt(dx*dx+dz*dz);
+                if(dist < (obj.radius + playerRadius) && pos.y < obj.position.y + (obj.height||3) && pos.y + playerHeight > obj.position.y - (obj.height||0)) return true;
             }
         }
-        
-        // 键盘释放事件
-        function onKeyUp(event) {
-            switch (event.code) {
-                case 'ArrowUp':
-                case 'KeyW':
-                    moveForward = false;
-                    break;
-                    
-                case 'ArrowLeft':
-                case 'KeyA':
-                    moveLeft = false;
-                    break;
-                    
-                case 'ArrowDown':
-                case 'KeyS':
-                    moveBackward = false;
-                    break;
-                    
-                case 'ArrowRight':
-                case 'KeyD':
-                    moveRight = false;
-                    break;
+        return false;
+    }
+
+    function onWindowResize(){ camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight); }
+
+    function onKeyDown(e){
+        switch(e.code){
+            case 'ArrowUp': case 'KeyW': moveForward=true; break;
+            case 'ArrowLeft': case 'KeyA': moveLeft=true; break;
+            case 'ArrowDown': case 'KeyS': moveBackward=true; break;
+            case 'ArrowRight': case 'KeyD': moveRight=true; break;
+            case 'Space': if(canJump){ velocity.y += 6; canJump=false;} break;
+            case 'Escape': controls.unlock(); document.getElementById('ui').style.display='block'; break;
+        }
+    }
+    function onKeyUp(e){
+        switch(e.code){
+            case 'ArrowUp': case 'KeyW': moveForward=false; break;
+            case 'ArrowLeft': case 'KeyA': moveLeft=false; break;
+            case 'ArrowDown': case 'KeyS': moveBackward=false; break;
+            case 'ArrowRight': case 'KeyD': moveRight=false; break;
+        }
+    }
+
+    function animate(){
+        requestAnimationFrame(animate);
+        const time=performance.now();
+        const delta=(time-prevTime)/1000;
+        if(controls.isLocked===true){
+            velocity.x -= velocity.x * 10.0 * delta;
+            velocity.z -= velocity.z * 10.0 * delta;
+            velocity.y -= 9.8 * 2.0 * delta; // 简化重力
+
+            direction.z = Number(moveForward) - Number(moveBackward);
+            direction.x = Number(moveRight) - Number(moveLeft);
+            direction.normalize();
+
+            if(moveForward || moveBackward) velocity.z -= direction.z * 6.0 * delta * 60;
+            if(moveLeft || moveRight) velocity.x -= direction.x * 6.0 * delta * 60;
+
+            // 保存位置
+            const oldPos = controls.getObject().position.clone();
+
+            controls.moveRight(-velocity.x * delta);
+            controls.moveForward(-velocity.z * delta);
+            controls.getObject().position.y += velocity.y * delta;
+
+            // 地面高度（固定为 1.8）
+            if(controls.getObject().position.y < 1.8){ velocity.y = 0; controls.getObject().position.y = 1.8; canJump=true; }
+
+            // 碰撞
+            if(checkCollision(controls.getObject().position)){
+                controls.getObject().position.copy(oldPos);
+                velocity.x = 0; velocity.z = 0;
             }
         }
-        
-        // 设置移动设备控制
-        function setupMobileControls() {
-            const joystick = document.getElementById('joystick');
-            const jumpButton = document.getElementById('jumpButton');
-            let joystickActive = false;
-            let joystickStartX, joystickStartY;
-            let joystickX = 0, joystickY = 0;
-            
-            // 触摸开始
-            joystick.addEventListener('touchstart', function(e) {
-                e.preventDefault();
-                joystickActive = true;
-                const touch = e.touches[0];
-                joystickStartX = touch.clientX;
-                joystickStartY = touch.clientY;
-            });
-            
-            // 触摸移动
-            document.addEventListener('touchmove', function(e) {
-                if (!joystickActive) return;
-                e.preventDefault();
-                const touch = e.touches[0];
-                const deltaX = touch.clientX - joystickStartX;
-                const deltaY = touch.clientY - joystickStartY;
-                
-                // 限制摇杆移动范围
-                const distance = Math.min(40, Math.sqrt(deltaX * deltaX + deltaY * deltaY));
-                const angle = Math.atan2(deltaY, deltaX);
-                
-                joystickX = Math.cos(angle) * distance;
-                joystickY = Math.sin(angle) * distance;
-                
-                // 更新摇杆位置
-                const inner = joystick.querySelector('.joystick-inner');
-                inner.style.transform = `translate(${joystickX}px, ${joystickY}px)`;
-                
-                // 转换为移动方向
-                moveForward = joystickY < -10;
-                moveBackward = joystickY > 10;
-                moveLeft = joystickX < -10;
-                moveRight = joystickX > 10;
-            });
-            
-            // 触摸结束
-            document.addEventListener('touchend', function(e) {
-                if (!joystickActive) return;
-                joystickActive = false;
-                joystickX = 0;
-                joystickY = 0;
-                
-                // 重置摇杆位置
-                const inner = joystick.querySelector('.joystick-inner');
-                inner.style.transform = 'translate(0, 0)';
-                
-                // 停止移动
-                moveForward = false;
-                moveBackward = false;
-                moveLeft = false;
-                moveRight = false;
-            });
-            
-            // 跳跃按钮
-            jumpButton.addEventListener('touchstart', function(e) {
-                e.preventDefault();
-                if (canJump === true) velocity.y += 350;
-                canJump = false;
-            });
-            
-            // 自动锁定指针（移动设备）
-            setTimeout(() => {
-                controls.lock();
-            }, 1000);
-        }
-        
-        // 窗口大小调整
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-        
-        // 动画循环
-        function animate() {
-            requestAnimationFrame(animate);
-            
-            if (controls.isLocked === true) {
-                const time = performance.now();
-                const delta = (time - prevTime) / 1000;
-                
-                velocity.x -= velocity.x * 10.0 * delta;
-                velocity.z -= velocity.z * 10.0 * delta;
-                velocity.y -= 9.8 * 100.0 * delta; // 重力
-                
-                direction.z = Number(moveForward) - Number(moveBackward);
-                direction.x = Number(moveRight) - Number(moveLeft);
-                direction.normalize();
-                
-                // 保存当前位置
-                const oldPosition = controls.getObject().position.clone();
-                
-                if (moveForward || moveBackward) velocity.z -= direction.z * 400.0 * delta;
-                if (moveLeft || moveRight) velocity.x -= direction.x * 400.0 * delta;
-                
-                controls.moveRight(-velocity.x * delta);
-                controls.moveForward(-velocity.z * delta);
-                
-                controls.getObject().position.y += (velocity.y * delta);
-                
-                // 碰撞检测
-                const newPosition = controls.getObject().position.clone();
-                if (checkCollision(newPosition)) {
-                    // 如果发生碰撞，恢复之前的位置
-                    controls.getObject().position.copy(oldPosition);
-                    velocity.x = 0;
-                    velocity.z = 0;
-                }
-                
-                // 检查电梯接近
-                checkElevatorProximity();
-                
-                // 地面检测
-                const groundLevel = currentFloor === 1 ? 5 : 25;
-                if (controls.getObject().position.y < groundLevel) {
-                    velocity.y = 0;
-                    controls.getObject().position.y = groundLevel;
-                    canJump = true;
-                }
-                
-                prevTime = time;
-            }
-            
-            renderer.render(scene, camera);
-        }
-        
-        // 初始化并开始动画
-        init();
-        animate();
+        renderer.render(scene,camera);
+        prevTime=time;
+    }
+
     </script>
 </body>
 </html>
