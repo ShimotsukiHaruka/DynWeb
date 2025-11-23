@@ -1,1053 +1,1065 @@
 <!DOCTYPE html>
+
 <html lang="zh-CN">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>大型多场馆立体展览馆</title>
+
+    <title>虚拟卢浮宫 - 沉浸式展厅</title>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.min.js"></script>
+
+   
+
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #1a2a3a;
+
             overflow: hidden;
-            color: #fff;
+
+            background: #000;
+
+            font-family: 'Times New Roman', serif;
+
         }
-        
-        #container {
+
+       
+
+        #ui-layer {
+
             position: absolute;
-            width: 100%;
-            height: 100%;
-        }
-        
-        #ui {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            padding: 20px;
-            z-index: 100;
-            pointer-events: none;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            color: #fff;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-        
-        .subtitle {
-            font-size: 1.2rem;
-            color: #bdc3c7;
-        }
-        
-        .controls {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 10px;
-            padding: 15px;
-            max-width: 300px;
-            margin: 0 auto;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            pointer-events: auto;
-            color: #333;
-        }
-        
-        .control-item {
+
+            top: 0; left: 0; width: 100%; height: 100%;
+
             display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        
-        .key {
-            display: inline-block;
-            background: #333;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 5px;
-            margin-right: 10px;
-            min-width: 40px;
-            text-align: center;
-            font-weight: bold;
-        }
-        
-        #startButton {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            background: #4a6ee0;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: background 0.3s;
-        }
-        
-        #startButton:hover {
-            background: #3a5ec0;
-        }
-        
-        .mobile-controls {
-            display: none;
-            position: absolute;
-            bottom: 20px;
-            width: 100%;
-            justify-content: space-between;
-            padding: 0 20px;
-            pointer-events: auto;
-        }
-        
-        .joystick {
-            width: 120px;
-            height: 120px;
-            background: rgba(255, 255, 255, 0.7);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        
-        .joystick-inner {
-            width: 60px;
-            height: 60px;
-            background: rgba(74, 110, 224, 0.8);
-            border-radius: 50%;
-        }
-        
-        .action-buttons {
-            display: flex;
+
             flex-direction: column;
-            gap: 15px;
-        }
-        
-        .action-button {
-            width: 70px;
-            height: 70px;
-            background: rgba(255, 255, 255, 0.7);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
+
             justify-content: center;
-            font-weight: bold;
+
+            align-items: center;
+
+            background: rgba(0,0,0,0.85);
+
+            color: #d4af37; /* 金色 */
+
+            z-index: 999;
+
+            transition: opacity 0.5s;
+
+        }
+
+       
+
+        h1 {
+
+            font-size: 3rem;
+
+            letter-spacing: 5px;
+
+            margin-bottom: 20px;
+
+            text-transform: uppercase;
+
+            border-bottom: 2px solid #d4af37;
+
+            padding-bottom: 10px;
+
+        }
+
+       
+
+        p {
+
+            color: #ccc;
+
+            margin-bottom: 30px;
+
             font-size: 1.2rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+
         }
-        
-        .crosshair {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 20px;
-            height: 20px;
-            z-index: 10;
-            pointer-events: none;
-        }
-        
-        .crosshair::before, .crosshair::after {
-            content: '';
-            position: absolute;
-            background: rgba(255, 255, 255, 0.8);
-        }
-        
-        .crosshair::before {
-            width: 2px;
-            height: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-        
-        .crosshair::after {
-            width: 20px;
-            height: 2px;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-        
-        .floor-indicator {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 10px 15px;
-            border-radius: 5px;
-            font-size: 1rem;
-            pointer-events: none;
-        }
-        
-        .elevator-panel {
-            position: absolute;
-            top: 50%;
-            right: 20px;
-            transform: translateY(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            border-radius: 10px;
-            display: none;
-            pointer-events: auto;
-        }
-        
-        .elevator-btn {
-            width: 50px;
-            height: 50px;
-            background: #4a6ee0;
-            color: white;
-            border: none;
-            border-radius: 5px;
+
+
+
+        #start-btn {
+
+            padding: 15px 40px;
+
+            background: transparent;
+
+            border: 2px solid #d4af37;
+
+            color: #d4af37;
+
             font-size: 1.2rem;
-            font-weight: bold;
-            margin: 5px;
+
             cursor: pointer;
-            transition: background 0.3s;
+
+            transition: all 0.3s;
+
+            font-family: serif;
+
         }
-        
-        .elevator-btn:hover {
-            background: #3a5ec0;
+
+
+
+        #start-btn:hover {
+
+            background: #d4af37;
+
+            color: #000;
+
         }
-        
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 2rem;
-            }
-            
-            .subtitle {
-                font-size: 1rem;
-            }
-            
-            .mobile-controls {
-                display: flex;
-            }
-            
-            .elevator-panel {
-                right: 10px;
-                padding: 10px;
-            }
-            
-            .elevator-btn {
-                width: 40px;
-                height: 40px;
-                font-size: 1rem;
-            }
+
+
+
+        #instructions {
+
+            position: absolute;
+
+            bottom: 20px;
+
+            left: 20px;
+
+            color: rgba(255,255,255,0.5);
+
+            pointer-events: none;
+
         }
+
+
+
+        /* 十字准星 */
+
+        #crosshair {
+
+            position: absolute;
+
+            top: 50%; left: 50%;
+
+            width: 4px; height: 4px;
+
+            background: rgba(255, 255, 255, 0.5);
+
+            border-radius: 50%;
+
+            transform: translate(-50%, -50%);
+
+            pointer-events: none;
+
+            mix-blend-mode: difference;
+
+        }
+
     </style>
+
 </head>
+
 <body>
+
+
+
+    <div id="ui-layer">
+
+        <h1>Grand Galerie</h1>
+
+        <p>虚拟艺术展厅体验</p>
+
+        <button id="start-btn">进入展厅</button>
+
+    </div>
+
+
+
+    <div id="instructions">WASD 移动 | 鼠标 观看 | ESC 退出</div>
+
+    <div id="crosshair"></div>
+
     <div id="container"></div>
-    
-    <div id="ui">
-        <div class="header">
-            <h1>大型多场馆立体展览馆</h1>
-            <p class="subtitle">使用WASD移动，鼠标控制视角 - 可进入所有展厅</p>
-        </div>
-        
-        <div class="controls">
-            <div class="control-item">
-                <span class="key">W</span>
-                <span>前进</span>
-            </div>
-            <div class="control-item">
-                <span class="key">S</span>
-                <span>后退</span>
-            </div>
-            <div class="control-item">
-                <span class="key">A</span>
-                <span>左移</span>
-            </div>
-            <div class="control-item">
-                <span class="key">D</span>
-                <span>右移</span>
-            </div>
-            <div class="control-item">
-                <span class="key">鼠标</span>
-                <span>控制视角</span>
-            </div>
-            <div class="control-item">
-                <span class="key">空格</span>
-                <span>跳跃</span>
-            </div>
-            <div class="control-item">
-                <span class="key">E</span>
-                <span>使用电梯</span>
-            </div>
-            
-            <button id="startButton">进入展览馆</button>
-        </div>
-    </div>
-    
-    <div class="mobile-controls">
-        <div class="joystick" id="joystick">
-            <div class="joystick-inner"></div>
-        </div>
-        <div class="action-buttons">
-            <div class="action-button" id="jumpButton">跳</div>
-        </div>
-    </div>
-    
-    <div class="floor-indicator" id="floorIndicator">一楼 - 现代艺术馆</div>
-    
-    <div class="elevator-panel" id="elevatorPanel">
-        <button class="elevator-btn" data-floor="1">1F</button>
-        <button class="elevator-btn" data-floor="2">2F</button>
-    </div>
-    
-    <div class="crosshair"></div>
+
+
 
     <script>
-        // 检测移动设备
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        
-        // 初始化变量
-        let camera, scene, renderer, controls;
-        let moveForward = false;
-        let moveBackward = false;
-        let moveLeft = false;
-        let moveRight = false;
-        let canJump = false;
-        let prevTime = performance.now();
-        const velocity = new THREE.Vector3();
-        const direction = new THREE.Vector3();
-        
-        // 碰撞检测相关变量
-        let collisionObjects = [];
-        const playerRadius = 0.5; // 减小玩家半径
-        const playerHeight = 5; // 减小玩家高度
-        
-        // 楼层和展厅管理
-        let currentFloor = 1;
-        const floors = {
-            1: { name: "一楼 - 现代艺术馆", y: 5 },
-            2: { name: "二楼 - 古典艺术馆", y: 25 }
+
+        // ==========================================
+
+        // 1. 程序化纹理生成器 (无需外部图片即可产生真实感)
+
+        // ==========================================
+
+        const TextureGen = {
+
+            // 生成拼花木地板纹理
+
+            createParquet: function() {
+
+                const canvas = document.createElement('canvas');
+
+                canvas.width = 1024; canvas.height = 1024;
+
+                const ctx = canvas.getContext('2d');
+
+               
+
+                // 背景色
+
+                ctx.fillStyle = '#5d4037';
+
+                ctx.fillRect(0, 0, 1024, 1024);
+
+               
+
+                // 绘制木纹拼花
+
+                ctx.strokeStyle = '#3e2723';
+
+                ctx.lineWidth = 2;
+
+                const tileSize = 128;
+
+               
+
+                for(let y=0; y<1024; y+=tileSize) {
+
+                    for(let x=0; x<1024; x+=tileSize) {
+
+                        ctx.save();
+
+                        ctx.translate(x, y);
+
+                        // 随机细微色差模拟真实木头
+
+                        ctx.fillStyle = `hsl(25, 30%, ${25 + Math.random()*10}%)`;
+
+                        ctx.fillRect(2, 2, tileSize-4, tileSize-4);
+
+                       
+
+                        // 木纹线条
+
+                        ctx.globalAlpha = 0.1;
+
+                        for(let i=0; i<10; i++) {
+
+                            ctx.beginPath();
+
+                            ctx.moveTo(0, Math.random()*tileSize);
+
+                            ctx.lineTo(tileSize, Math.random()*tileSize);
+
+                            ctx.stroke();
+
+                        }
+
+                        ctx.restore();
+
+                    }
+
+                }
+
+               
+
+                const tex = new THREE.CanvasTexture(canvas);
+
+                tex.wrapS = THREE.RepeatWrapping;
+
+                tex.wrapT = THREE.RepeatWrapping;
+
+                tex.repeat.set(8, 8);
+
+                return tex;
+
+            },
+
+
+
+            // 生成经典的博物馆墙面纹理 (带噪点和纹理的石膏/织物感)
+
+            createWall: function() {
+
+                const canvas = document.createElement('canvas');
+
+                canvas.width = 512; canvas.height = 512;
+
+                const ctx = canvas.getContext('2d');
+
+               
+
+                // 深红/暗红色背景 (类似卢浮宫红厅)
+
+                ctx.fillStyle = '#781f1f';
+
+                ctx.fillRect(0,0,512,512);
+
+               
+
+                // 添加噪点
+
+                for(let i=0; i<50000; i++) {
+
+                    ctx.fillStyle = `rgba(0,0,0,${Math.random()*0.1})`;
+
+                    ctx.fillRect(Math.random()*512, Math.random()*512, 2, 2);
+
+                }
+
+               
+
+                // 淡淡的锦缎图案
+
+                ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+
+                ctx.lineWidth = 5;
+
+                for(let i=0; i<10; i++) {
+
+                    ctx.beginPath();
+
+                    ctx.arc(Math.random()*512, Math.random()*512, 50, 0, Math.PI*2);
+
+                    ctx.stroke();
+
+                }
+
+
+
+                const tex = new THREE.CanvasTexture(canvas);
+
+                tex.wrapS = THREE.RepeatWrapping;
+
+                tex.wrapT = THREE.RepeatWrapping;
+
+                tex.repeat.set(4, 2);
+
+                return tex;
+
+            }
+
         };
-        
-        // 电梯位置
-        const elevatorPosition = new THREE.Vector3(35, 0, 0);
-        let nearElevator = false;
-        
-        // 初始化场景
+
+
+
+        // ==========================================
+
+        // 2. 核心场景设置
+
+        // ==========================================
+
+        let scene, camera, renderer, controls;
+
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+
+        let prevTime = performance.now();
+
+        const velocity = new THREE.Vector3();
+
+        const direction = new THREE.Vector3();
+
+
+
         function init() {
-            // 创建场景
+
+            // 场景
+
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xf0f0f0);
-            scene.fog = new THREE.Fog(0xf0f0f0, 0, 200);
-            
-            // 创建相机
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 5, 20); // 调整初始位置
-            
-            // 创建灯光
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
-            
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(50, 100, 50);
-            directionalLight.castShadow = true;
-            scene.add(directionalLight);
-            
-            // 创建渲染器
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+
+            scene.background = new THREE.Color(0x111111);
+
+            // 添加雾效增加深邃感
+
+            scene.fog = new THREE.FogExp2(0x111111, 0.015);
+
+
+
+            // 相机
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+
+            camera.position.y = 1.7; // 人眼高度
+
+
+
+            // 渲染器 (开启高质量阴影)
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+
             renderer.setSize(window.innerWidth, window.innerHeight);
+
             renderer.shadowMap.enabled = true;
+
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap; // 柔和阴影
+
+            renderer.outputEncoding = THREE.sRGBEncoding; // 正确的颜色空间
+
+            renderer.toneMapping = THREE.ACESFilmicToneMapping; // 电影级色调映射
+
+            renderer.toneMappingExposure = 1.0;
+
             document.getElementById('container').appendChild(renderer.domElement);
-            
-            // 创建控制器
+
+
+
+            // 控制器
+
             controls = new THREE.PointerLockControls(camera, document.body);
-            
-            // 创建展览馆结构
-            createExhibitionHall();
-            
-            // 事件监听
-            document.getElementById('startButton').addEventListener('click', function() {
+
+
+
+            // 交互逻辑
+
+            const startBtn = document.getElementById('start-btn');
+
+            const uiLayer = document.getElementById('ui-layer');
+
+           
+
+            startBtn.addEventListener('click', () => {
+
                 controls.lock();
+
             });
-            
-            controls.addEventListener('lock', function() {
-                document.getElementById('ui').style.display = 'none';
+
+
+
+            controls.addEventListener('lock', () => {
+
+                uiLayer.style.opacity = '0';
+
+                setTimeout(() => uiLayer.style.display = 'none', 500);
+
             });
-            
-            controls.addEventListener('unlock', function() {
-                document.getElementById('ui').style.display = 'block';
+
+
+
+            controls.addEventListener('unlock', () => {
+
+                uiLayer.style.display = 'flex';
+
+                setTimeout(() => uiLayer.style.opacity = '1', 10);
+
             });
-            
-            // 键盘控制
-            document.addEventListener('keydown', onKeyDown);
-            document.addEventListener('keyup', onKeyUp);
-            
-            // 电梯按钮事件
-            document.querySelectorAll('.elevator-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const floor = parseInt(this.getAttribute('data-floor'));
-                    changeFloor(floor);
-                });
-            });
-            
-            // 窗口大小调整
+
+
+
+            setupInputs();
+
+            buildGallery();
+
+            setupLighting();
+
+            animate();
+
+
+
             window.addEventListener('resize', onWindowResize);
-            
-            // 移动设备控制
-            if (isMobile) {
-                setupMobileControls();
-            }
-            
-            // 更新楼层指示器
-            updateFloorIndicator();
+
         }
-        
-        // 创建展览馆结构
-        function createExhibitionHall() {
-            // 创建一楼
-            createFirstFloor();
-            
-            // 创建二楼
-            createSecondFloor();
-            
-            // 添加电梯
-            createElevator();
-        }
-        
-        // 创建一楼 - 现代艺术馆
-        function createFirstFloor() {
-            // 地面
-            const floorGeometry = new THREE.PlaneGeometry(200, 200);
-            const floorMaterial = new THREE.MeshPhongMaterial({ 
-                color: 0xffffff, 
-                shininess: 0 
+
+
+
+        // ==========================================
+
+        // 3. 展厅建筑构建 (Architecture)
+
+        // ==========================================
+
+        function buildGallery() {
+
+            const hallWidth = 20;
+
+            const hallLength = 60;
+
+            const hallHeight = 8;
+
+
+
+            // --- 地板 (PBR 材质) ---
+
+            const floorGeo = new THREE.PlaneGeometry(hallWidth, hallLength);
+
+            const floorMat = new THREE.MeshStandardMaterial({
+
+                map: TextureGen.createParquet(),
+
+                roughness: 0.2, // 抛光木地板
+
+                metalness: 0.0,
+
+                color: 0xffffff
+
             });
-            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+
             floor.rotation.x = -Math.PI / 2;
+
             floor.receiveShadow = true;
+
             scene.add(floor);
-            
-            // 创建多个展厅 - 使用开放式设计
-            createOpenGalleryRoom(-40, 0, 0, "现代艺术", 0x3498db);
-            createOpenGalleryRoom(40, 0, 0, "抽象艺术", 0xe74c3c);
-            createOpenGalleryRoom(0, 0, -40, "数字艺术", 0x2ecc71);
-            createOpenGalleryRoom(0, 0, 40, "装置艺术", 0xf39c12);
-            
-            // 中央大厅
-            createCentralHall();
-        }
-        
-        // 创建二楼 - 古典艺术馆
-        function createSecondFloor() {
-            // 二楼地面
-            const secondFloorGeometry = new THREE.PlaneGeometry(180, 180);
-            const secondFloorMaterial = new THREE.MeshPhongMaterial({ 
-                color: 0xf8f8f8
+
+
+
+            // --- 墙壁 ---
+
+            const wallMat = new THREE.MeshStandardMaterial({
+
+                map: TextureGen.createWall(),
+
+                roughness: 0.9,
+
+                color: 0xffffff
+
             });
-            const secondFloor = new THREE.Mesh(secondFloorGeometry, secondFloorMaterial);
-            secondFloor.position.y = 20;
-            secondFloor.rotation.x = -Math.PI / 2;
-            secondFloor.receiveShadow = true;
-            scene.add(secondFloor);
-            
-            // 二楼展厅 - 开放式设计
-            createOpenClassicalGalleryRoom(-35, 20, -35, "文艺复兴", 0x8b7355);
-            createOpenClassicalGalleryRoom(35, 20, -35, "巴洛克", 0x6b5a3c);
-            createOpenClassicalGalleryRoom(-35, 20, 35, "印象派", 0x3498db);
-            createOpenClassicalGalleryRoom(35, 20, 35, "立体主义", 0x9b59b6);
-            
-            // 二楼中央观景台
-            createViewingDeck();
-        }
-        
-        // 创建开放式现代艺术展厅
-        function createOpenGalleryRoom(x, y, z, name, color) {
-            const roomGroup = new THREE.Group();
-            roomGroup.position.set(x, y, z);
-            
-            // 只创建部分墙壁，留出入口
-            const wallMaterial = new THREE.MeshPhongMaterial({ 
-                color: 0xffffff,
-                transparent: true,
-                opacity: 0.8
-            });
-            
+
+
+
+            // 左墙
+
+            const wallGeoSide = new THREE.BoxGeometry(1, hallHeight, hallLength);
+
+            const wallLeft = new THREE.Mesh(wallGeoSide, wallMat);
+
+            wallLeft.position.set(-hallWidth/2, hallHeight/2, 0);
+
+            wallLeft.receiveShadow = true;
+
+            wallLeft.castShadow = true;
+
+            scene.add(wallLeft);
+
+
+
+            // 右墙
+
+            const wallRight = new THREE.Mesh(wallGeoSide, wallMat);
+
+            wallRight.position.set(hallWidth/2, hallHeight/2, 0);
+
+            wallRight.receiveShadow = true;
+
+            wallRight.castShadow = true;
+
+            scene.add(wallRight);
+
+
+
             // 后墙
-            const backWallGeometry = new THREE.BoxGeometry(30, 20, 1);
-            const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
-            backWall.position.set(0, 10, -15);
-            backWall.castShadow = true;
-            roomGroup.add(backWall);
-            
-            // 侧墙（不完整，留出空间）
-            const leftWallGeometry = new THREE.BoxGeometry(1, 20, 14);
-            const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
-            leftWall.position.set(-15, 10, -8);
-            leftWall.castShadow = true;
-            roomGroup.add(leftWall);
-            
-            const rightWallGeometry = new THREE.BoxGeometry(1, 20, 14);
-            const rightWall = new THREE.Mesh(rightWallGeometry, wallMaterial);
-            rightWall.position.set(15, 10, -8);
-            rightWall.castShadow = true;
-            roomGroup.add(rightWall);
-            
-            // 添加立体画框
-            add3DFrames(roomGroup, color);
-            
-            scene.add(roomGroup);
-            
-            // 只将实心墙壁添加到碰撞检测
-            collisionObjects.push({
-                type: 'wall',
-                mesh: backWall,
-                position: new THREE.Vector3(x, y + 10, z - 15),
-                width: 30,
-                height: 20,
-                depth: 1
+
+            const wallGeoEnd = new THREE.BoxGeometry(hallWidth + 2, hallHeight, 1);
+
+            const wallBack = new THREE.Mesh(wallGeoEnd, wallMat);
+
+            wallBack.position.set(0, hallHeight/2, -hallLength/2);
+
+            wallBack.receiveShadow = true;
+
+            scene.add(wallBack);
+
+
+
+            // 前墙 (入口)
+
+            const wallFront = new THREE.Mesh(wallGeoEnd, wallMat);
+
+            wallFront.position.set(0, hallHeight/2, hallLength/2);
+
+            wallFront.receiveShadow = true;
+
+            scene.add(wallFront);
+
+
+
+            // --- 天花板 (拱形结构) ---
+
+            const ceilingGeo = new THREE.CylinderGeometry(hallWidth/2, hallWidth/2, hallLength, 32, 1, true, 0, Math.PI);
+
+            const ceilingMat = new THREE.MeshStandardMaterial({
+
+                color: 0xe0e0e0, // 白色石膏
+
+                roughness: 1.0,
+
+                side: THREE.DoubleSide
+
             });
-            
-            collisionObjects.push({
-                type: 'wall',
-                mesh: leftWall,
-                position: new THREE.Vector3(x - 15, y + 10, z - 8),
-                width: 1,
-                height: 20,
-                depth: 14
-            });
-            
-            collisionObjects.push({
-                type: 'wall',
-                mesh: rightWall,
-                position: new THREE.Vector3(x + 15, y + 10, z - 8),
-                width: 1,
-                height: 20,
-                depth: 14
-            });
+
+            const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
+
+            ceiling.rotation.y = -Math.PI / 2; // 对齐长廊
+
+            ceiling.rotation.z = Math.PI / 2;  // 拱起
+
+            ceiling.position.set(0, hallHeight, 0);
+
+            scene.add(ceiling);
+
+
+
+            // --- 踢脚线和装饰条 (增加细节) ---
+
+            const skirtingGeo = new THREE.BoxGeometry(1, 0.6, hallLength);
+
+            const skirtingMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.5 });
+
+           
+
+            const skLeft = new THREE.Mesh(skirtingGeo, skirtingMat);
+
+            skLeft.position.set(-hallWidth/2 + 0.5, 0.3, 0);
+
+            scene.add(skLeft);
+
+           
+
+            const skRight = new THREE.Mesh(skirtingGeo, skirtingMat);
+
+            skRight.position.set(hallWidth/2 - 0.5, 0.3, 0);
+
+            scene.add(skRight);
+
+
+
+            // --- 放置画作 (槽位) ---
+
+            // 参数: 图片URL (或颜色), 墙壁位置('left'/'right'/'back'), 沿墙坐标, 尺寸
+
+           
+
+            // 左墙画作
+
+            createPainting('https://picsum.photos/id/1015/800/1200', 'left', -15, 3, 4, "风景");
+
+            createPainting('https://picsum.photos/id/1016/1000/800', 'left', -5, 4, 3, "峡谷");
+
+            createPainting('https://picsum.photos/id/1003/800/800', 'left', 5, 3, 3, "鹿");
+
+            createPainting('https://picsum.photos/id/1025/600/900', 'left', 15, 2.5, 3.5, "森林");
+
+
+
+            // 右墙画作
+
+            createPainting('https://picsum.photos/id/237/800/1000', 'right', -15, 3, 4, "黑犬");
+
+            createPainting('https://picsum.photos/id/433/1000/700', 'right', -5, 4, 2.8, "肖像");
+
+            createPainting('https://picsum.photos/id/593/800/800', 'right', 5, 3, 3, "老虎");
+
+            createPainting('https://picsum.photos/id/659/600/900', 'right', 15, 2.5, 3.5, "雪狼");
+
+
+
+            // 尽头主画 (如蒙娜丽莎位)
+
+            createPainting('https://img.allhistory.com/5f0c1225a4188f0001a96678.jpg?imageView2/2/w/824/|imageMogr2/strip/interlace/1/quality/75/format/jpg', 'back', 0, 5, 7, "大师之作");
+
+
+
+            // 长椅 (增加空间参照物)
+
+            createBench(0, 0);
+
+            createBench(0, -15);
+
+            createBench(0, 15);
+
         }
-        
-        // 创建开放式古典艺术展厅
-        function createOpenClassicalGalleryRoom(x, y, z, name, color) {
-            const roomGroup = new THREE.Group();
-            roomGroup.position.set(x, y, z);
-            
-            // 古典风格墙壁
-            const wallMaterial = new THREE.MeshPhongMaterial({ 
-                color: 0xf5f5dc
+
+
+
+        // ==========================================
+
+        // 4. 画作创建系统 (真实感核心)
+
+        // ==========================================
+
+        function createPainting(imageUrl, wallSide, zOffset, width, height, title) {
+
+            const group = new THREE.Group();
+
+           
+
+            // 1. 复杂金框 (使用多个几何体模拟雕花边框)
+
+            const frameColor = 0xcfaa56; // 沉稳的金色
+
+            const frameMat = new THREE.MeshStandardMaterial({
+
+                color: frameColor,
+
+                roughness: 0.3,
+
+                metalness: 0.8
+
             });
-            
-            // 后墙
-            const backWallGeometry = new THREE.BoxGeometry(25, 15, 1);
-            const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
-            backWall.position.set(0, 7.5, -12.5);
-            backWall.castShadow = true;
-            roomGroup.add(backWall);
-            
-            // 添加古典风格画框
-            addClassicalFrames(roomGroup, color);
-            
-            scene.add(roomGroup);
-            
-            // 添加到碰撞检测
-            collisionObjects.push({
-                type: 'wall',
-                mesh: backWall,
-                position: new THREE.Vector3(x, y + 7.5, z - 12.5),
-                width: 25,
-                height: 15,
-                depth: 1
+
+
+
+            // 外框
+
+            const frameThick = 0.2;
+
+            const frameDepth = 0.3;
+
+            const outerGeo = new THREE.BoxGeometry(width + frameThick*2, height + frameThick*2, frameDepth);
+
+            const outerFrame = new THREE.Mesh(outerGeo, frameMat);
+
+            outerFrame.castShadow = true;
+
+            group.add(outerFrame);
+
+
+
+            // 内衬 (画布背板)
+
+            const canvasGeo = new THREE.PlaneGeometry(width, height);
+
+           
+
+            // 加载纹理
+
+            const textureLoader = new THREE.TextureLoader();
+
+            // 如果图片加载失败，使用灰色代替
+
+            const texture = textureLoader.load(imageUrl,
+
+                function(tex) {
+
+                    tex.encoding = THREE.sRGBEncoding;
+
+                },
+
+                undefined,
+
+                function(err) { console.error("Error loading image"); }
+
+            );
+
+
+
+            const canvasMat = new THREE.MeshStandardMaterial({
+
+                map: texture,
+
+                roughness: 0.6,
+
+                color: 0xffffff
+
             });
-        }
-        
-        // 添加立体画框
-        function add3DFrames(roomGroup, color) {
-            const framePositions = [
-                [-12, 8, -14.8], [12, 8, -14.8], // 后墙上的画
-                [-14.8, 8, -12], [-14.8, 8, 12], [14.8, 8, -12], [14.8, 8, 12] // 侧墙上的画
-            ];
-            
-            framePositions.forEach(pos => {
-                // 创建立体画框
-                const frameGroup = new THREE.Group();
-                
-                // 画框外框
-                const frameGeometry = new THREE.BoxGeometry(5, 7, 0.3);
-                const frameMaterial = new THREE.MeshPhongMaterial({ color: 0x8b7355 });
-                const frame = new THREE.Mesh(frameGeometry, frameMaterial);
-                
-                // 画作
-                const paintingGeometry = new THREE.BoxGeometry(4.5, 6.5, 0.2);
-                const paintingMaterial = new THREE.MeshPhongMaterial({ 
-                    color: new THREE.Color().setHSL(Math.random(), 0.7, 0.6)
-                });
-                const painting = new THREE.Mesh(paintingGeometry, paintingMaterial);
-                painting.position.z = 0.15;
-                
-                frameGroup.add(frame);
-                frameGroup.add(painting);
-                frameGroup.position.set(pos[0], pos[1], pos[2]);
-                
-                // 根据位置调整朝向
-                if (Math.abs(pos[0]) > 14) {
-                    frameGroup.rotation.y = pos[0] > 0 ? -Math.PI / 2 : Math.PI / 2;
-                } else {
-                    frameGroup.rotation.y = Math.PI; // 后墙的画朝向房间内部
-                }
-                
-                roomGroup.add(frameGroup);
-                
-                // 添加到碰撞检测
-                collisionObjects.push({
-                    type: 'frame',
-                    mesh: frameGroup,
-                    position: new THREE.Vector3(
-                        roomGroup.position.x + pos[0],
-                        roomGroup.position.y + pos[1],
-                        roomGroup.position.z + pos[2]
-                    ),
-                    width: 5,
-                    height: 7,
-                    depth: 0.5
-                });
-            });
-        }
-        
-        // 添加古典风格画框
-        function addClassicalFrames(roomGroup, color) {
-            const framePositions = [
-                [-10, 6, -12.4], [10, 6, -12.4], [0, 6, -12.4]
-            ];
-            
-            framePositions.forEach(pos => {
-                const frameGroup = new THREE.Group();
-                
-                // 古典画框（椭圆形）
-                const frameGeometry = new THREE.TorusGeometry(2.5, 0.3, 16, 100, Math.PI * 2);
-                const frameMaterial = new THREE.MeshPhongMaterial({ color: 0xd4af37 });
-                const frame = new THREE.Mesh(frameGeometry, frameMaterial);
-                frame.rotation.x = Math.PI / 2;
-                
-                // 画布
-                const canvasGeometry = new THREE.CircleGeometry(2.2, 32);
-                const canvasMaterial = new THREE.MeshPhongMaterial({ 
-                    color: new THREE.Color().setHSL(Math.random() * 0.1 + 0.5, 0.5, 0.7)
-                });
-                const canvas = new THREE.Mesh(canvasGeometry, canvasMaterial);
-                canvas.rotation.x = -Math.PI / 2;
-                canvas.position.y = 0.1;
-                
-                frameGroup.add(frame);
-                frameGroup.add(canvas);
-                frameGroup.position.set(pos[0], pos[1], pos[2]);
-                frameGroup.rotation.y = Math.PI; // 朝向房间内部
-                
-                roomGroup.add(frameGroup);
-                
-                // 添加到碰撞检测
-                collisionObjects.push({
-                    type: 'frame',
-                    mesh: frameGroup,
-                    position: new THREE.Vector3(
-                        roomGroup.position.x + pos[0],
-                        roomGroup.position.y + pos[1],
-                        roomGroup.position.z + pos[2]
-                    ),
-                    radius: 2.8,
-                    height: 0.6
-                });
-            });
-        }
-        
-        // 创建中央大厅
-        function createCentralHall() {
-            const hallGroup = new THREE.Group();
-            
-            // 大厅地面装饰
-            const floorPatternGeometry = new THREE.CircleGeometry(15, 32);
-            const floorPatternMaterial = new THREE.MeshPhongMaterial({ 
-                color: 0x2c3e50,
-                transparent: true,
-                opacity: 0.3
-            });
-            const floorPattern = new THREE.Mesh(floorPatternGeometry, floorPatternMaterial);
-            floorPattern.rotation.x = -Math.PI / 2;
-            floorPattern.position.y = 0.01;
-            hallGroup.add(floorPattern);
-            
-            // 中央雕塑
-            const sculptureGeometry = new THREE.ConeGeometry(3, 8, 8);
-            const sculptureMaterial = new THREE.MeshPhongMaterial({ color: 0x95a5a6 });
-            const sculpture = new THREE.Mesh(sculptureGeometry, sculptureMaterial);
-            sculpture.position.y = 4;
-            sculpture.castShadow = true;
-            hallGroup.add(sculpture);
-            
-            scene.add(hallGroup);
-            
-            // 添加到碰撞检测
-            collisionObjects.push({
-                type: 'sculpture',
-                mesh: sculpture,
-                position: new THREE.Vector3(0, 4, 0),
-                radius: 3,
-                height: 8
-            });
-        }
-        
-        // 创建观景台
-        function createViewingDeck() {
-            const deckGroup = new THREE.Group();
-            deckGroup.position.y = 20;
-            
-            // 观景台栏杆
-            const railingGeometry = new THREE.TorusGeometry(12, 0.5, 16, 100);
-            const railingMaterial = new THREE.MeshPhongMaterial({ color: 0x7f8c8d });
-            const railing = new THREE.Mesh(railingGeometry, railingMaterial);
-            railing.rotation.x = Math.PI / 2;
-            railing.position.y = 1;
-            deckGroup.add(railing);
-            
-            scene.add(deckGroup);
-            
-            // 添加到碰撞检测
-            collisionObjects.push({
-                type: 'railing',
-                mesh: railing,
-                position: new THREE.Vector3(0, 21, 0),
-                radius: 12,
-                height: 1
-            });
-        }
-        
-        // 创建电梯
-        function createElevator() {
-            const elevatorGroup = new THREE.Group();
-            elevatorGroup.position.copy(elevatorPosition);
-            
-            // 电梯井
-            const shaftGeometry = new THREE.BoxGeometry(6, 40, 6);
-            const shaftMaterial = new THREE.MeshPhongMaterial({ color: 0x34495e });
-            const shaft = new THREE.Mesh(shaftGeometry, shaftMaterial);
-            shaft.position.y = 20;
-            elevatorGroup.add(shaft);
-            
-            // 电梯轿厢（一楼）
-            const cabGeometry = new THREE.BoxGeometry(4, 8, 4);
-            const cabMaterial = new THREE.MeshPhongMaterial({ color: 0xecf0f1 });
-            const cab = new THREE.Mesh(cabGeometry, cabMaterial);
-            cab.position.y = 4;
-            cab.userData.isElevator = true;
-            elevatorGroup.add(cab);
-            
-            scene.add(elevatorGroup);
-            
-            // 添加到碰撞检测
-            collisionObjects.push({
-                type: 'elevator',
-                mesh: cab,
-                position: new THREE.Vector3(
-                    elevatorPosition.x,
-                    elevatorPosition.y + 4,
-                    elevatorPosition.z
-                ),
-                width: 4,
-                height: 8,
-                depth: 4
-            });
-        }
-        
-        // 碰撞检测函数
-        function checkCollision(newPosition) {
-            for (let i = 0; i < collisionObjects.length; i++) {
-                const obj = collisionObjects[i];
-                
-                let collision = false;
-                
-                // 根据对象类型进行不同的碰撞检测
-                if (obj.type === 'wall' || obj.type === 'frame' || obj.type === 'elevator') {
-                    // 长方体碰撞检测
-                    const halfWidth = obj.width / 2;
-                    const halfHeight = obj.height / 2;
-                    const halfDepth = obj.depth / 2;
-                    
-                    // 计算长方体在世界坐标系中的边界
-                    const minX = obj.position.x - halfWidth;
-                    const maxX = obj.position.x + halfWidth;
-                    const minY = obj.position.y - halfHeight;
-                    const maxY = obj.position.y + halfHeight;
-                    const minZ = obj.position.z - halfDepth;
-                    const maxZ = obj.position.z + halfDepth;
-                    
-                    // 检测玩家是否与长方体相交
-                    if (newPosition.x + playerRadius > minX && 
-                        newPosition.x - playerRadius < maxX &&
-                        newPosition.y + playerHeight > minY && 
-                        newPosition.y < maxY &&
-                        newPosition.z + playerRadius > minZ && 
-                        newPosition.z - playerRadius < maxZ) {
-                        collision = true;
-                    }
-                } else if (obj.type === 'sculpture' || obj.type === 'railing') {
-                    // 圆柱体碰撞检测
-                    const dx = newPosition.x - obj.position.x;
-                    const dz = newPosition.z - obj.position.z;
-                    const distance = Math.sqrt(dx * dx + dz * dz);
-                    
-                    if (distance < obj.radius + playerRadius && 
-                        newPosition.y < obj.position.y + obj.height / 2 &&
-                        newPosition.y + playerHeight > obj.position.y - obj.height / 2) {
-                        collision = true;
-                    }
-                }
-                
-                if (collision) {
-                    return true;
-                }
+
+           
+
+            const canvasMesh = new THREE.Mesh(canvasGeo, canvasMat);
+
+            canvasMesh.position.z = frameDepth/2 + 0.01; // 稍微突出一点
+
+            group.add(canvasMesh);
+
+
+
+            // 2. 专用照明 (博物馆重点照明)
+
+            const spotLight = new THREE.SpotLight(0xfff5e6, 2.5); // 暖白光
+
+            spotLight.angle = Math.PI / 6;
+
+            spotLight.penumbra = 0.5; // 边缘柔和
+
+            spotLight.decay = 2;
+
+            spotLight.distance = 20;
+
+            spotLight.castShadow = true;
+
+            spotLight.shadow.mapSize.width = 512;
+
+            spotLight.shadow.mapSize.height = 512;
+
+
+
+            // 定位画框和灯光
+
+            const hallWidth = 20;
+
+            const yPos = height/2 + 2; // 挂画高度
+
+
+
+            if (wallSide === 'left') {
+
+                group.position.set(-hallWidth/2 + 0.7, yPos, zOffset);
+
+                group.rotation.y = Math.PI / 2;
+
+               
+
+                // 灯光位置：天花板偏向画作一侧
+
+                spotLight.position.set(-hallWidth/2 + 5, 7, zOffset);
+
+                spotLight.target = canvasMesh;
+
+            } else if (wallSide === 'right') {
+
+                group.position.set(hallWidth/2 - 0.7, yPos, zOffset);
+
+                group.rotation.y = -Math.PI / 2;
+
+
+
+                spotLight.position.set(hallWidth/2 - 5, 7, zOffset);
+
+                spotLight.target = canvasMesh;
+
+            } else if (wallSide === 'back') {
+
+                group.position.set(0, yPos, -30 + 0.6); // -hallLength/2
+
+               
+
+                spotLight.position.set(0, 7, -20);
+
+                spotLight.target = canvasMesh;
+
             }
-            
-            return false;
+
+
+
+            scene.add(group);
+
+            scene.add(spotLight);
+
+            // SpotLight target 必须也在场景中
+
+            // 由于 target 是 canvasMesh，它是 group 的子元素，已经被添加到场景间接中
+
+            // 但 Threejs 有时需要手动更新
+
         }
-        
-        // 检查是否靠近电梯
-        function checkElevatorProximity() {
-            const playerPos = controls.getObject().position;
-            const distance = playerPos.distanceTo(elevatorPosition);
-            nearElevator = distance < 8;
-            
-            // 显示或隐藏电梯面板
-            const elevatorPanel = document.getElementById('elevatorPanel');
-            elevatorPanel.style.display = nearElevator ? 'block' : 'none';
+
+
+
+        function createBench(x, z) {
+
+            const benchGroup = new THREE.Group();
+
+           
+
+            // 座垫 (红色天鹅绒)
+
+            const seatGeo = new THREE.BoxGeometry(2, 0.5, 4);
+
+            const seatMat = new THREE.MeshStandardMaterial({ color: 0x800000, roughness: 1.0 });
+
+            const seat = new THREE.Mesh(seatGeo, seatMat);
+
+            seat.position.y = 0.5;
+
+            seat.castShadow = true;
+
+            benchGroup.add(seat);
+
+
+
+            // 腿 (金色)
+
+            const legGeo = new THREE.BoxGeometry(1.8, 0.5, 3.8);
+
+            const legMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5 });
+
+            const leg = new THREE.Mesh(legGeo, legMat);
+
+            leg.position.y = 0.25;
+
+            benchGroup.add(leg);
+
+
+
+            benchGroup.position.set(x, 0, z);
+
+            scene.add(benchGroup);
+
         }
-        
-        // 切换楼层
-        function changeFloor(floor) {
-            if (floor === currentFloor) return;
-            
-            currentFloor = floor;
-            const floorInfo = floors[floor];
-            
-            // 移动玩家到新楼层
-            controls.getObject().position.y = floorInfo.y;
-            controls.getObject().position.x = elevatorPosition.x;
-            controls.getObject().position.z = elevatorPosition.z;
-            
-            // 更新楼层指示器
-            updateFloorIndicator();
-            
-            // 隐藏电梯面板
-            document.getElementById('elevatorPanel').style.display = 'none';
-            nearElevator = false;
+
+
+
+        // ==========================================
+
+        // 5. 灯光系统
+
+        // ==========================================
+
+        function setupLighting() {
+
+            // 环境光 (基础亮度，偏冷色)
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+
+            scene.add(ambientLight);
+
+
+
+            // 半球光 (模拟天光和地面的反光)
+
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
+
+            scene.add(hemiLight);
+
         }
-        
-        // 更新楼层指示器
-        function updateFloorIndicator() {
-            const indicator = document.getElementById('floorIndicator');
-            indicator.textContent = floors[currentFloor].name;
-        }
-        
-        // 键盘按下事件
-        function onKeyDown(event) {
-            switch (event.code) {
-                case 'ArrowUp':
-                case 'KeyW':
-                    moveForward = true;
-                    break;
-                    
-                case 'ArrowLeft':
-                case 'KeyA':
-                    moveLeft = true;
-                    break;
-                    
-                case 'ArrowDown':
-                case 'KeyS':
-                    moveBackward = true;
-                    break;
-                    
-                case 'ArrowRight':
-                case 'KeyD':
-                    moveRight = true;
-                    break;
-                    
-                case 'Space':
-                    if (canJump === true) velocity.y += 350;
-                    canJump = false;
-                    break;
-                    
-                case 'KeyE':
-                    if (nearElevator) {
-                        document.getElementById('elevatorPanel').style.display = 'block';
-                    }
-                    break;
-            }
-        }
-        
-        // 键盘释放事件
-        function onKeyUp(event) {
-            switch (event.code) {
-                case 'ArrowUp':
-                case 'KeyW':
-                    moveForward = false;
-                    break;
-                    
-                case 'ArrowLeft':
-                case 'KeyA':
-                    moveLeft = false;
-                    break;
-                    
-                case 'ArrowDown':
-                case 'KeyS':
-                    moveBackward = false;
-                    break;
-                    
-                case 'ArrowRight':
-                case 'KeyD':
-                    moveRight = false;
-                    break;
-            }
-        }
-        
-        // 设置移动设备控制
-        function setupMobileControls() {
-            const joystick = document.getElementById('joystick');
-            const jumpButton = document.getElementById('jumpButton');
-            let joystickActive = false;
-            let joystickStartX, joystickStartY;
-            let joystickX = 0, joystickY = 0;
-            
-            // 触摸开始
-            joystick.addEventListener('touchstart', function(e) {
-                e.preventDefault();
-                joystickActive = true;
-                const touch = e.touches[0];
-                joystickStartX = touch.clientX;
-                joystickStartY = touch.clientY;
+
+
+
+        // ==========================================
+
+        // 6. 输入与物理控制
+
+        // ==========================================
+
+        function setupInputs() {
+
+            document.addEventListener('keydown', (event) => {
+
+                switch (event.code) {
+
+                    case 'ArrowUp': case 'KeyW': moveForward = true; break;
+
+                    case 'ArrowLeft': case 'KeyA': moveLeft = true; break;
+
+                    case 'ArrowDown': case 'KeyS': moveBackward = true; break;
+
+                    case 'ArrowRight': case 'KeyD': moveRight = true; break;
+
+                }
+
             });
-            
-            // 触摸移动
-            document.addEventListener('touchmove', function(e) {
-                if (!joystickActive) return;
-                e.preventDefault();
-                const touch = e.touches[0];
-                const deltaX = touch.clientX - joystickStartX;
-                const deltaY = touch.clientY - joystickStartY;
-                
-                // 限制摇杆移动范围
-                const distance = Math.min(40, Math.sqrt(deltaX * deltaX + deltaY * deltaY));
-                const angle = Math.atan2(deltaY, deltaX);
-                
-                joystickX = Math.cos(angle) * distance;
-                joystickY = Math.sin(angle) * distance;
-                
-                // 更新摇杆位置
-                const inner = joystick.querySelector('.joystick-inner');
-                inner.style.transform = `translate(${joystickX}px, ${joystickY}px)`;
-                
-                // 转换为移动方向
-                moveForward = joystickY < -10;
-                moveBackward = joystickY > 10;
-                moveLeft = joystickX < -10;
-                moveRight = joystickX > 10;
+
+
+
+            document.addEventListener('keyup', (event) => {
+
+                switch (event.code) {
+
+                    case 'ArrowUp': case 'KeyW': moveForward = false; break;
+
+                    case 'ArrowLeft': case 'KeyA': moveLeft = false; break;
+
+                    case 'ArrowDown': case 'KeyS': moveBackward = false; break;
+
+                    case 'ArrowRight': case 'KeyD': moveRight = false; break;
+
+                }
+
             });
-            
-            // 触摸结束
-            document.addEventListener('touchend', function(e) {
-                if (!joystickActive) return;
-                joystickActive = false;
-                joystickX = 0;
-                joystickY = 0;
-                
-                // 重置摇杆位置
-                const inner = joystick.querySelector('.joystick-inner');
-                inner.style.transform = 'translate(0, 0)';
-                
-                // 停止移动
-                moveForward = false;
-                moveBackward = false;
-                moveLeft = false;
-                moveRight = false;
-            });
-            
-            // 跳跃按钮
-            jumpButton.addEventListener('touchstart', function(e) {
-                e.preventDefault();
-                if (canJump === true) velocity.y += 350;
-                canJump = false;
-            });
-            
-            // 自动锁定指针（移动设备）
-            setTimeout(() => {
-                controls.lock();
-            }, 1000);
+
         }
-        
-        // 窗口大小调整
+
+
+
         function onWindowResize() {
+
             camera.aspect = window.innerWidth / window.innerHeight;
+
             camera.updateProjectionMatrix();
+
             renderer.setSize(window.innerWidth, window.innerHeight);
+
         }
-        
-        // 动画循环
+
+
+
+        // ==========================================
+
+        // 7. 动画循环
+
+        // ==========================================
+
         function animate() {
+
             requestAnimationFrame(animate);
-            
+
+
+
             if (controls.isLocked === true) {
+
                 const time = performance.now();
+
                 const delta = (time - prevTime) / 1000;
-                
+
+
+
+                // 阻尼效果 (停下来时有平滑减速)
+
                 velocity.x -= velocity.x * 10.0 * delta;
+
                 velocity.z -= velocity.z * 10.0 * delta;
-                velocity.y -= 9.8 * 100.0 * delta; // 重力
-                
+
+
+
                 direction.z = Number(moveForward) - Number(moveBackward);
+
                 direction.x = Number(moveRight) - Number(moveLeft);
+
                 direction.normalize();
-                
-                // 保存当前位置
-                const oldPosition = controls.getObject().position.clone();
-                
-                if (moveForward || moveBackward) velocity.z -= direction.z * 400.0 * delta;
-                if (moveLeft || moveRight) velocity.x -= direction.x * 400.0 * delta;
-                
+
+
+
+                // 移动速度 (博物馆步行速度，不要太快)
+
+                const speed = 40.0;
+
+                if (moveForward || moveBackward) velocity.z -= direction.z * speed * delta;
+
+                if (moveLeft || moveRight) velocity.x -= direction.x * speed * delta;
+
+
+
                 controls.moveRight(-velocity.x * delta);
+
                 controls.moveForward(-velocity.z * delta);
-                
-                controls.getObject().position.y += (velocity.y * delta);
-                
-                // 碰撞检测
-                const newPosition = controls.getObject().position.clone();
-                if (checkCollision(newPosition)) {
-                    // 如果发生碰撞，恢复之前的位置
-                    controls.getObject().position.copy(oldPosition);
-                    velocity.x = 0;
-                    velocity.z = 0;
-                }
-                
-                // 检查电梯接近
-                checkElevatorProximity();
-                
-                // 地面检测
-                const groundLevel = currentFloor === 1 ? 5 : 25;
-                if (controls.getObject().position.y < groundLevel) {
-                    velocity.y = 0;
-                    controls.getObject().position.y = groundLevel;
-                    canJump = true;
-                }
-                
-                prevTime = time;
+
+
+
+                // 简单的边界限制 (防止走出房间)
+
+                const pos = controls.getObject().position;
+
+                if (pos.x < -9) pos.x = -9;
+
+                if (pos.x > 9) pos.x = 9;
+
+                if (pos.z < -29) pos.z = -29;
+
+                if (pos.z > 29) pos.z = 29;
+
             }
-            
+
+
+
+            prevTime = performance.now();
+
             renderer.render(scene, camera);
+
         }
-        
-        // 初始化并开始动画
+
+
+
+        // 启动
+
         init();
-        animate();
+
+
+
     </script>
+
 </body>
+
 </html>
