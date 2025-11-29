@@ -90,23 +90,42 @@
                 const canvas = document.createElement('canvas');
                 canvas.width = 1024; canvas.height = 1024;
                 const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#2c1e14'; ctx.fillRect(0, 0, 1024, 1024);
-                const w = 128, h = 32;
-                ctx.lineWidth = 1; ctx.lineCap = 'square';
-                for (let y = 0; y < 1024; y += w) {
-                    for (let x = 0; x < 1024; x += w) {
-                        ctx.save(); ctx.translate(x, y);
-                        const v = () => Math.random() * 10 - 5;
-                        ctx.fillStyle = `hsl(28, ${30 + v()}%, ${15 + v()}%)`;
-                        ctx.fillRect(0, 0, h, w); ctx.strokeRect(0, 0, h, w);
-                        ctx.fillStyle = `hsl(28, ${30 + v()}%, ${15 + v()}%)`;
-                        ctx.fillRect(h, w-h, w, h); ctx.strokeRect(h, w-h, w, h);
+                
+                // 背景色
+                ctx.fillStyle = '#5d4037';
+                ctx.fillRect(0, 0, 1024, 1024);
+                
+                // 绘制木纹拼花
+                ctx.strokeStyle = '#3e2723';
+                ctx.lineWidth = 2;
+                const tileSize = 128;
+                
+                for(let y=0; y<1024; y+=tileSize) {
+                    for(let x=0; x<1024; x+=tileSize) {
+                        ctx.save();
+                        ctx.translate(x, y);
+                        // 随机细微色差模拟真实木头
+                        ctx.fillStyle = `hsl(25, 30%, ${25 + Math.random()*10}%)`;
+                        ctx.fillRect(2, 2, tileSize-4, tileSize-4);
+                        
+                        // 木纹线条细节
+                        ctx.globalAlpha = 0.1;
+                        for(let i=0; i<10; i++) {
+                            ctx.beginPath();
+                            ctx.moveTo(0, Math.random()*tileSize);
+                            ctx.lineTo(tileSize, Math.random()*tileSize);
+                            ctx.stroke();
+                        }
                         ctx.restore();
                     }
                 }
+                
                 const tex = new THREE.CanvasTexture(canvas);
-                tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
-                tex.repeat.set(2, 2); tex.anisotropy = 16;
+                tex.wrapS = THREE.RepeatWrapping;
+                tex.wrapT = THREE.RepeatWrapping;
+                tex.repeat.set(4, 4);
+                // 确保颜色空间正确
+                tex.encoding = THREE.sRGBEncoding; 
                 return tex;
             },
             createDamaskWall: function() {
@@ -191,6 +210,7 @@
 
                 return tex;
             }
+            
         };
 
         // ==========================================
@@ -199,14 +219,14 @@
         let scene, camera, renderer, controls;
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
         let prevTime = performance.now();
+        let audioLoader, listener, bgMusic, footstepsSound;
         const velocity = new THREE.Vector3();
         const direction = new THREE.Vector3();
 
         // 统一纹理加载器 (解决跨域问题)
         const textureLoader = new THREE.TextureLoader();
         textureLoader.setCrossOrigin('anonymous');
-
-        function init() {
+function init() {
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x050505);
             scene.fog = new THREE.FogExp2(0x1a0505, 0.012);
@@ -214,6 +234,32 @@
             camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 150);
             camera.position.set(0, 1.7, 25); // 初始位置靠近入口，看向蒙娜丽莎
             
+            // ==========================================
+            // 1. 音频系统初始化和加载 (必须在 camera 之后)
+            // ==========================================
+            listener = new THREE.AudioListener();
+            camera.add(listener); // 将听者添加到相机，声音将随相机移动
+
+            audioLoader = new THREE.AudioLoader();
+
+            // 1.1 加载背景音乐
+            bgMusic = new THREE.Audio(listener);
+            audioLoader.load('audio/bg_music.mp3', function(buffer) {
+                bgMusic.setBuffer(buffer);
+                bgMusic.setLoop(true);
+                bgMusic.setVolume(0.3);
+            });
+
+            // 1.2 加载脚步声
+            footstepsSound = new THREE.Audio(listener);
+            audioLoader.load('audio/footsteps.mp3', function(buffer) {
+                footstepsSound.setBuffer(buffer);
+                footstepsSound.setLoop(true);
+                footstepsSound.setVolume(0.5); 
+            });
+            // ==========================================
+            // 2. 渲染器和DOM设置
+            // ==========================================
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
@@ -223,21 +269,48 @@
             renderer.toneMappingExposure = 1.0;
             document.getElementById('container').appendChild(renderer.domElement);
 
+            // ==========================================
+            // 3. 控制器和UI设置
+            // ==========================================
             controls = new THREE.PointerLockControls(camera, document.body);
 
             const startBtn = document.getElementById('start-btn');
             const uiLayer = document.getElementById('ui-layer');
             
             startBtn.addEventListener('click', () => controls.lock());
-            controls.addEventListener('lock', () => {
+
+            // 3.1 锁定事件 (播放背景音乐)  
+                controls.addEventListener('lock', () => {
                 uiLayer.style.opacity = '0';
                 setTimeout(() => uiLayer.style.display = 'none', 500);
+
+                // 【修复后的播放逻辑：加入延迟】
+                if (bgMusic) { 
+                    // 增加 100 毫秒的延迟，确保浏览器 Web Audio Context 已完全激活
+                    setTimeout(() => {
+                        if (!bgMusic.isPlaying) {
+                            bgMusic.play();
+                        }
+                    }, 100); 
+                }
             });
+
+            // 3.2 解锁事件 (暂停所有音乐)
             controls.addEventListener('unlock', () => {
                 uiLayer.style.display = 'flex';
                 setTimeout(() => uiLayer.style.opacity = '1', 10);
-            });
 
+                if (bgMusic && bgMusic.isPlaying) {
+                    bgMusic.pause();
+                }
+                if (footstepsSound && footstepsSound.isPlaying) {
+                    footstepsSound.pause();
+                }
+            });
+            
+            // ==========================================
+            // 4. 启动所有模块
+            // ==========================================
             setupInputs();
             buildArchitecture();
             setupExhibition();
@@ -245,18 +318,17 @@
             animate();
 
             window.addEventListener('resize', onWindowResize);
-        }
-
+        } // init 函数在这里正常结束！
+        
         // ==========================================
+        // 5. 其他函数定义 (在 init 函数外部)
         // ==========================================
-// 3. 建筑结构
-// ==========================================
-function buildArchitecture() {
+        function buildArchitecture() { 
     const width = 24; 
     const length = 70;
     const height = 10; // 总高不变
     const skylightHeight = 16.0;
-    const skylightheight2 = 15.5;
+    const skylightheight2 = 15.78;
     // --- 墙体参数调整 ---
     const skirtingHeight = 0.25; // 踢脚线高度
     const newWallHeight = height - skirtingHeight; // 9.85m
@@ -301,6 +373,7 @@ function buildArchitecture() {
         emissive: 0x98C1D9,    // 纯白色自发光
         emissiveIntensity: 0.1, // 自发光强度 (可调，值越大越亮)
         side: THREE.DoubleSide, // 两面都可见
+        depthWrite: false,
         transparent: true, 
         polygonOffset: true, 
         polygonOffsetFactor: -1, // 负值表示更靠近相机（即更高）
@@ -308,6 +381,7 @@ function buildArchitecture() {
     });
 
     const rectangularSkylight = new THREE.Mesh(rectangularSkylightGeo.clone().translate(0, 0.2, 0), skylightMat);
+    
 
     // 4. 设置位置和旋转
     rectangularSkylight.rotation.x = -Math.PI / 2; // 沿 X 轴旋转 90 度使其水平
@@ -438,8 +512,11 @@ function buildArchitecture() {
             createMasterpiece('https://m.media-amazon.com/images/I/71FWNAcBpQL._AC_UF894,1000_QL80_.jpg', 'front', 0, 8, 6);
 
             // 长椅
-            createVelvetBench(0, -10);
-            createVelvetBench(0, 10);
+            createBench(0, 0);
+
+            createBench(0, -15);
+
+            createBench(0, 15);
         }
 
         function createMasterpiece(url, side, offset, w, h) {
@@ -476,19 +553,19 @@ function buildArchitecture() {
             const yPos = 1.0 + (10-2.5)/2; // 墙面中心高度
 
             if (side === 'left') {
-                group.position.set(-hallWidth/2 + 0.4, yPos, offset);
+                group.position.set(-hallWidth/2 + 0.1, yPos, offset);
                 group.rotation.y = Math.PI/2;
                 spot.position.set(0, 12, offset); 
             } else if (side === 'right') {
-                group.position.set(hallWidth/2 - 0.4, yPos, offset);
+                group.position.set(hallWidth/2 - 0.1, yPos, offset);
                 group.rotation.y = -Math.PI/2;
                 spot.position.set(0, 12, offset);
             } else if (side === 'back') {
-                group.position.set(0, yPos, -hallLength/2 + 0.4);
+                group.position.set(0, yPos, -hallLength/2 + 0.1);
                 spot.position.set(0, 12, -hallLength/2 + 10);
             } else if (side === 'front') {
                 // 新增：入口墙逻辑
-                group.position.set(0, yPos, hallLength/2 - 0.4); 
+                group.position.set(0, yPos, hallLength/2 - 0.1); 
                 group.rotation.y = Math.PI; // 旋转180度面向房间
                 spot.position.set(0, 12, hallLength/2 - 10); // 灯光从前方打过去
             }
@@ -498,20 +575,26 @@ function buildArchitecture() {
             scene.add(spot);
         }
 
-        function createVelvetBench(x, z) {
-            const group = new THREE.Group();
-            const cushion = new THREE.Mesh(
-                new THREE.BoxGeometry(3, 0.6, 1.5),
-                new THREE.MeshStandardMaterial({ color: 0x660000, roughness: 1.0 })
-            );
-            cushion.position.y = 0.6; cushion.castShadow = true; group.add(cushion);
-            const legMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
-            const addLeg = (lx, lz) => {
-                const l = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.6, 0.2), legMat);
-                l.position.set(lx, 0.3, lz); group.add(l);
-            };
-            addLeg(1.3, 0.6); addLeg(-1.3, 0.6); addLeg(1.3, -0.6); addLeg(-1.3, -0.6);
-            group.position.set(x, 0, z); scene.add(group);
+        function createBench(x, z) {
+            const benchGroup = new THREE.Group();
+            
+            // 座垫 (红色天鹅绒)
+            const seatGeo = new THREE.BoxGeometry(2, 0.5, 4);
+            const seatMat = new THREE.MeshStandardMaterial({ color: 0x800000, roughness: 1.0, map: TextureGen.createDamaskWall() });
+            const seat = new THREE.Mesh(seatGeo, seatMat);
+            seat.position.y = 0.5;
+            seat.castShadow = true;
+            benchGroup.add(seat);
+
+            // 腿 (金色底座)
+            const legGeo = new THREE.BoxGeometry(1.8, 0.5, 3.8);
+            const legMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5 });
+            const leg = new THREE.Mesh(legGeo, legMat);
+            leg.position.y = 0.25;
+            benchGroup.add(leg);
+
+            benchGroup.position.set(x, 0, z);
+            scene.add(benchGroup);
         }
 
         // ==========================================
@@ -527,20 +610,21 @@ function buildArchitecture() {
         }
 
         function setupInputs() {
-            document.addEventListener('keydown', (e) => {
-                switch(e.code) {
-                    case 'KeyW': case 'ArrowUp': moveForward = true; break;
-                    case 'KeyA': case 'ArrowLeft': moveLeft = true; break;
-                    case 'KeyS': case 'ArrowDown': moveBackward = true; break;
-                    case 'KeyD': case 'ArrowRight': moveRight = true; break;
+            document.addEventListener('keydown', (event) => {
+                switch (event.code) {
+                    case 'ArrowUp': case 'KeyW': moveForward = true; break;
+                    case 'ArrowLeft': case 'KeyA': moveLeft = true; break;
+                    case 'ArrowDown': case 'KeyS': moveBackward = true; break;
+                    case 'ArrowRight': case 'KeyD': moveRight = true; break;
                 }
             });
-            document.addEventListener('keyup', (e) => {
-                switch(e.code) {
-                    case 'KeyW': case 'ArrowUp': moveForward = false; break;
-                    case 'KeyA': case 'ArrowLeft': moveLeft = false; break;
-                    case 'KeyS': case 'ArrowDown': moveBackward = false; break;
-                    case 'KeyD': case 'ArrowRight': moveRight = false; break;
+
+            document.addEventListener('keyup', (event) => {
+                switch (event.code) {
+                    case 'ArrowUp': case 'KeyW': moveForward = false; break;
+                    case 'ArrowLeft': case 'KeyA': moveLeft = false; break;
+                    case 'ArrowDown': case 'KeyS': moveBackward = false; break;
+                    case 'ArrowRight': case 'KeyD': moveRight = false; break;
                 }
             });
         }
@@ -552,23 +636,65 @@ function buildArchitecture() {
         }
 
         function animate() {
-            requestAnimationFrame(animate);
-            if (controls.isLocked) {
-                const time = performance.now();
-                const delta = (time - prevTime) / 1000;
-                velocity.x -= velocity.x * 8.0 * delta;
-                velocity.z -= velocity.z * 8.0 * delta;
-                direction.z = Number(moveForward) - Number(moveBackward);
-                direction.x = Number(moveRight) - Number(moveLeft);
-                direction.normalize();
-                if (moveForward || moveBackward) velocity.z -= direction.z * 40.0 * delta;
-                if (moveLeft || moveRight) velocity.x -= direction.x * 40.0 * delta;
-                controls.moveRight(-velocity.x * delta);
-                controls.moveForward(-velocity.z * delta);
-            }
-            prevTime = performance.now();
-            renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+
+    if (controls.isLocked === true) {
+        const time = performance.now();
+        const delta = (time - prevTime) / 1000;
+
+        // 阻尼效果 (停下来时有平滑减速)
+        velocity.x -= velocity.x * 10.0 * delta;
+        velocity.z -= velocity.z * 10.0 * delta;
+
+        direction.z = Number(moveForward) - Number(moveBackward);
+        direction.x = Number(moveRight) - Number(moveLeft);
+        direction.normalize();
+
+        // 移动速度 (博物馆步行速度，不要太快)
+        const speed = 40.0;
+        if (moveForward || moveBackward) velocity.z -= direction.z * speed * delta;
+        if (moveLeft || moveRight) velocity.x -= direction.x * speed * delta;
+
+        controls.moveRight(-velocity.x * delta);
+        controls.moveForward(-velocity.z * delta);
+
+        // ==========================================
+        // 脚步声控制逻辑
+        // ==========================================
+        const isMoving = moveForward || moveBackward || moveLeft || moveRight;
+
+        if (isMoving && footstepsSound && !footstepsSound.isPlaying) {
+            footstepsSound.play();
+        } else if (!isMoving && footstepsSound && footstepsSound.isPlaying) {
+            footstepsSound.pause();
         }
+        
+        // ==========================================
+        // 边界限制 (防止走出房间) - 放在 isLocked 内部
+        // ==========================================
+        const pos = controls.getObject().position;
+
+        // X轴限制 (左右墙壁)
+        if (pos.x < -11) pos.x = -11;
+        if (pos.x > 11) pos.x = 11;
+
+        // Z轴限制 (前后墙壁)
+        if (pos.z < -34) pos.z = -34;
+        if (pos.z > 34) pos.z = 34;
+
+    } else {
+        // 如果没有锁定 (即玩家已退出沉浸模式)，确保脚步声停止
+        if (footstepsSound && footstepsSound.isPlaying) {
+            footstepsSound.pause();
+        }
+    }
+
+    // ==========================================
+    // 渲染和时间更新 - 放在 if/else 块外面，只执行一次
+    // ==========================================
+    prevTime = performance.now();
+    renderer.render(scene, camera);
+}
 
         init();
     </script>
