@@ -1,1069 +1,442 @@
 <!DOCTYPE html>
-
 <html lang="zh-CN">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>虚拟卢浮宫 - 沉浸式展厅</title>
-
+    <title>Virtual Louvre - Grand Gallery</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.min.js"></script>
-
-   
-
+    
     <style>
-
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
-
             overflow: hidden;
-
             background: #000;
-
             font-family: 'Times New Roman', serif;
-
         }
-
-       
-
+        
         #ui-layer {
-
             position: absolute;
-
             top: 0; left: 0; width: 100%; height: 100%;
-
             display: flex;
-
             flex-direction: column;
-
             justify-content: center;
-
             align-items: center;
-
-            background: rgba(0,0,0,0.85);
-
-            color: #d4af37; /* 金色 */
-
+            background: rgba(0,0,0,0.9);
+            color: #d4af37;
             z-index: 999;
-
             transition: opacity 0.5s;
-
         }
-
-       
-
+        
         h1 {
-
-            font-size: 3rem;
-
+            font-size: 4rem;
             letter-spacing: 5px;
-
-            margin-bottom: 20px;
-
+            margin-bottom: 10px;
             text-transform: uppercase;
-
-            border-bottom: 2px solid #d4af37;
-
-            padding-bottom: 10px;
-
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
         }
-
-       
-
-        p {
-
-            color: #ccc;
-
-            margin-bottom: 30px;
-
+        
+        h2 {
             font-size: 1.2rem;
-
+            color: #888;
+            font-style: italic;
+            margin-bottom: 40px;
         }
-
-
 
         #start-btn {
-
-            padding: 15px 40px;
-
-            background: transparent;
-
-            border: 2px solid #d4af37;
-
+            padding: 15px 50px;
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid #d4af37;
             color: #d4af37;
-
             font-size: 1.2rem;
-
             cursor: pointer;
-
             transition: all 0.3s;
-
             font-family: serif;
-
         }
-
-
 
         #start-btn:hover {
-
             background: #d4af37;
-
             color: #000;
-
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.6);
         }
-
-
 
         #instructions {
-
             position: absolute;
-
             bottom: 20px;
-
             left: 20px;
-
-            color: rgba(255,255,255,0.5);
-
+            color: rgba(255,255,255,0.4);
+            font-size: 0.9rem;
             pointer-events: none;
-
         }
-
-
-
-        /* 十字准星 */
-
-        #crosshair {
-
-            position: absolute;
-
-            top: 50%; left: 50%;
-
-            width: 4px; height: 4px;
-
-            background: rgba(255, 255, 255, 0.5);
-
-            border-radius: 50%;
-
-            transform: translate(-50%, -50%);
-
-            pointer-events: none;
-
-            mix-blend-mode: difference;
-
-        }
-
     </style>
-
 </head>
-
 <body>
 
-
-
     <div id="ui-layer">
-
-        <h1>Grand Galerie</h1>
-
-        <p>虚拟艺术展厅体验</p>
-
-        <button id="start-btn">进入展厅</button>
-
+        <h1>Salle Rouge</h1>
+        <h2>Denon Wing - 19th Century French Painting</h2>
+        <button id="start-btn">ENTER EXHIBITION</button>
     </div>
 
-
-
-    <div id="instructions">WASD 移动 | 鼠标 观看 | ESC 退出</div>
-
-    <div id="crosshair"></div>
-
+    <div id="instructions">WASD Move | MOUSE Look | ESC Menu</div>
     <div id="container"></div>
 
-
-
     <script>
-
         // ==========================================
-
-        // 1. 程序化纹理生成器 (无需外部图片即可产生真实感)
-
+        // 1. 材质生成系统 (保持奢华质感)
         // ==========================================
-
         const TextureGen = {
-
-            // 生成拼花木地板纹理
-
             createParquet: function() {
-
                 const canvas = document.createElement('canvas');
-
                 canvas.width = 1024; canvas.height = 1024;
-
                 const ctx = canvas.getContext('2d');
-
-               
-
-                // 背景色
-
-                ctx.fillStyle = '#5d4037';
-
-                ctx.fillRect(0, 0, 1024, 1024);
-
-               
-
-                // 绘制木纹拼花
-
-                ctx.strokeStyle = '#3e2723';
-
-                ctx.lineWidth = 2;
-
-                const tileSize = 128;
-
-               
-
-                for(let y=0; y<1024; y+=tileSize) {
-
-                    for(let x=0; x<1024; x+=tileSize) {
-
-                        ctx.save();
-
-                        ctx.translate(x, y);
-
-                        // 随机细微色差模拟真实木头
-
-                        ctx.fillStyle = `hsl(25, 30%, ${25 + Math.random()*10}%)`;
-
-                        ctx.fillRect(2, 2, tileSize-4, tileSize-4);
-
-                       
-
-                        // 木纹线条
-
-                        ctx.globalAlpha = 0.1;
-
-                        for(let i=0; i<10; i++) {
-
-                            ctx.beginPath();
-
-                            ctx.moveTo(0, Math.random()*tileSize);
-
-                            ctx.lineTo(tileSize, Math.random()*tileSize);
-
-                            ctx.stroke();
-
-                        }
-
+                ctx.fillStyle = '#2c1e14'; ctx.fillRect(0, 0, 1024, 1024);
+                const w = 128, h = 32;
+                ctx.lineWidth = 1; ctx.lineCap = 'square';
+                for (let y = 0; y < 1024; y += w) {
+                    for (let x = 0; x < 1024; x += w) {
+                        ctx.save(); ctx.translate(x, y);
+                        const v = () => Math.random() * 10 - 5;
+                        ctx.fillStyle = `hsl(28, ${30 + v()}%, ${15 + v()}%)`;
+                        ctx.fillRect(0, 0, h, w); ctx.strokeRect(0, 0, h, w);
+                        ctx.fillStyle = `hsl(28, ${30 + v()}%, ${15 + v()}%)`;
+                        ctx.fillRect(h, w-h, w, h); ctx.strokeRect(h, w-h, w, h);
                         ctx.restore();
-
                     }
-
                 }
-
-               
-
                 const tex = new THREE.CanvasTexture(canvas);
-
-                tex.wrapS = THREE.RepeatWrapping;
-
-                tex.wrapT = THREE.RepeatWrapping;
-
-                tex.repeat.set(8, 8);
-
+                tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+                tex.repeat.set(8, 8); tex.anisotropy = 16;
                 return tex;
-
             },
-
-
-
-            // 生成经典的博物馆墙面纹理 (带噪点和纹理的石膏/织物感)
-
-            createWall: function() {
-
+            createDamaskWall: function() {
                 const canvas = document.createElement('canvas');
-
                 canvas.width = 512; canvas.height = 512;
-
                 const ctx = canvas.getContext('2d');
-
-               
-
-                // 深红/暗红色背景 (类似卢浮宫红厅)
-
-                ctx.fillStyle = '#781f1f';
-
-                ctx.fillRect(0,0,512,512);
-
-               
-
-                // 添加噪点
-
-                for(let i=0; i<50000; i++) {
-
-                    ctx.fillStyle = `rgba(0,0,0,${Math.random()*0.1})`;
-
-                    ctx.fillRect(Math.random()*512, Math.random()*512, 2, 2);
-
+                ctx.fillStyle = '#4a0404'; ctx.fillRect(0,0,512,512); // 深红底色
+                ctx.fillStyle = '#5e0b0b'; // 花纹色
+                const scale = 64; 
+                for(let y=0; y<=512; y+=scale) {
+                    for(let x=0; x<=512; x+=scale) {
+                        ctx.beginPath();
+                        ctx.moveTo(x + scale/2, y);
+                        ctx.quadraticCurveTo(x + scale, y + scale/2, x + scale/2, y + scale);
+                        ctx.quadraticCurveTo(x, y + scale/2, x + scale/2, y);
+                        ctx.fill();
+                    }
                 }
-
-               
-
-                // 淡淡的锦缎图案
-
-                ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-
-                ctx.lineWidth = 5;
-
-                for(let i=0; i<10; i++) {
-
-                    ctx.beginPath();
-
-                    ctx.arc(Math.random()*512, Math.random()*512, 50, 0, Math.PI*2);
-
-                    ctx.stroke();
-
-                }
-
-
-
                 const tex = new THREE.CanvasTexture(canvas);
-
-                tex.wrapS = THREE.RepeatWrapping;
-
-                tex.wrapT = THREE.RepeatWrapping;
-
-                tex.repeat.set(4, 2);
-
+                tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+                tex.repeat.set(6, 3);
                 return tex;
-
+            },
+            createSkylight: function() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 512; canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#dbeeff'; ctx.fillRect(0,0,512,512); // 天空蓝灰
+                ctx.lineWidth = 10; ctx.strokeStyle = '#222';
+                for(let i=0; i<=512; i+=64) {
+                    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 512); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(512, i); ctx.stroke();
+                }
+                const tex = new THREE.CanvasTexture(canvas);
+                tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+                tex.repeat.set(4, 10);
+                return tex;
             }
-
         };
 
-
-
         // ==========================================
-
-        // 2. 核心场景设置
-
+        // 2. 场景核心
         // ==========================================
-
         let scene, camera, renderer, controls;
-
         let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
-
         let prevTime = performance.now();
-
         const velocity = new THREE.Vector3();
-
         const direction = new THREE.Vector3();
 
-
+        // 统一纹理加载器 (解决跨域问题)
+        const textureLoader = new THREE.TextureLoader();
+        textureLoader.setCrossOrigin('anonymous');
 
         function init() {
-
-            // 场景
-
             scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050505);
+            scene.fog = new THREE.FogExp2(0x1a0505, 0.012);
 
-            scene.background = new THREE.Color(0x111111);
-
-            // 添加雾效增加深邃感
-
-            scene.fog = new THREE.FogExp2(0x111111, 0.015);
-
-
-
-            // 相机
-
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-
-            camera.position.y = 1.7; // 人眼高度
-
-
-
-            // 渲染器 (开启高质量阴影)
-
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 150);
+            camera.position.set(0, 1.7, 25); // 初始位置靠近入口，看向蒙娜丽莎
+            
             renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-
             renderer.setSize(window.innerWidth, window.innerHeight);
-
             renderer.shadowMap.enabled = true;
-
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap; // 柔和阴影
-
-            renderer.outputEncoding = THREE.sRGBEncoding; // 正确的颜色空间
-
-            renderer.toneMapping = THREE.ACESFilmicToneMapping; // 电影级色调映射
-
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
             renderer.toneMappingExposure = 1.0;
-
             document.getElementById('container').appendChild(renderer.domElement);
-
-
-
-            // 控制器
 
             controls = new THREE.PointerLockControls(camera, document.body);
 
-
-
-            // 交互逻辑
-
             const startBtn = document.getElementById('start-btn');
-
             const uiLayer = document.getElementById('ui-layer');
-
-           
-
-            startBtn.addEventListener('click', () => {
-
-                controls.lock();
-
-            });
-
-
-
+            
+            startBtn.addEventListener('click', () => controls.lock());
             controls.addEventListener('lock', () => {
-
                 uiLayer.style.opacity = '0';
-
                 setTimeout(() => uiLayer.style.display = 'none', 500);
-
             });
-
-
-
             controls.addEventListener('unlock', () => {
-
                 uiLayer.style.display = 'flex';
-
                 setTimeout(() => uiLayer.style.opacity = '1', 10);
-
             });
-
 
             setupInputs();
-
-            buildGallery();
-
-            setupLighting();
-
+            buildArchitecture();
+            setupExhibition();
+            setupAtmosphere();
             animate();
 
-
-
             window.addEventListener('resize', onWindowResize);
-
         }
 
-
-
         // ==========================================
-
-        // 3. 展厅建筑构建 (Architecture)
-
+        // 3. 建筑结构
         // ==========================================
+        function buildArchitecture() {
+            const width = 24; 
+            const length = 70;
+            const height = 10;
 
-        function buildGallery() {
-
-            const hallWidth = 20;
-
-            const hallLength = 60;
-
-            const hallHeight = 8;
-
-
-
-            // --- 地板 (PBR 材质) ---
-
-            const floorGeo = new THREE.PlaneGeometry(hallWidth, hallLength);
-
-            const floorMat = new THREE.MeshStandardMaterial({
-
-                map: TextureGen.createParquet(),
-
-                roughness: 0.2, // 抛光木地板
-
-                metalness: 0.0,
-
-                color: 0xffffff
-
-            });
-
-            const floor = new THREE.Mesh(floorGeo, floorMat);
-
+            // 地板
+            const floor = new THREE.Mesh(
+                new THREE.PlaneGeometry(width, length),
+                new THREE.MeshStandardMaterial({ map: TextureGen.createParquet(), roughness: 0.3, color: 0xdddddd })
+            );
             floor.rotation.x = -Math.PI / 2;
-
             floor.receiveShadow = true;
-
             scene.add(floor);
 
-
-
-            // --- 墙壁 ---
-
+            // 墙壁材质
             const wallMat = new THREE.MeshStandardMaterial({
-
-                map: TextureGen.createWall(),
-
-                roughness: 0.9,
-
-                color: 0xffffff
-
+                map: TextureGen.createDamaskWall(),
+                roughness: 0.8,
+                side: THREE.FrontSide 
             });
 
-
-
-            // 左墙
-
-            const wallGeoSide = new THREE.BoxGeometry(1, hallHeight, hallLength);
-
-            const wallLeft = new THREE.Mesh(wallGeoSide, wallMat);
-
-            wallLeft.position.set(-hallWidth/2, hallHeight/2, 0);
-
-            wallLeft.receiveShadow = true;
-
-            wallLeft.castShadow = true;
-
-            scene.add(wallLeft);
-
-
-
-            // 右墙
-
-            const wallRight = new THREE.Mesh(wallGeoSide, wallMat);
-
-            wallRight.position.set(hallWidth/2, hallHeight/2, 0);
-
-            wallRight.receiveShadow = true;
-
-            wallRight.castShadow = true;
-
-            scene.add(wallRight);
-
-
-
-            // 后墙
-
-            const wallGeoEnd = new THREE.BoxGeometry(hallWidth + 2, hallHeight, 1);
-
-            const wallBack = new THREE.Mesh(wallGeoEnd, wallMat);
-
-            wallBack.position.set(0, hallHeight/2, -hallLength/2);
-
-            wallBack.receiveShadow = true;
-
-            scene.add(wallBack);
-
-
-
-            // 前墙 (入口)
-
-            const wallFront = new THREE.Mesh(wallGeoEnd, wallMat);
-
-            wallFront.position.set(0, hallHeight/2, hallLength/2);
-
-            wallFront.receiveShadow = true;
-
-            scene.add(wallFront);
-
-
-
-            // --- 天花板 (拱形结构) ---
-
-            const ceilingGeo = new THREE.CylinderGeometry(hallWidth/2, hallWidth/2, hallLength, 32, 1, true, 0, Math.PI);
-
-            const ceilingMat = new THREE.MeshStandardMaterial({
-
-                color: 0xe0e0e0, // 白色石膏
-
-                roughness: 1.0,
-
-                side: THREE.DoubleSide
-
-            });
-
-            const ceiling = new THREE.Mesh(ceilingGeo, ceilingMat);
-
-            ceiling.rotation.y = -Math.PI / 2; // 对齐长廊
-
-            ceiling.rotation.z = Math.PI / 2;  // 拱起
-
-            ceiling.position.set(0, hallHeight, 0);
-
-            scene.add(ceiling);
-
-
-
-            // --- 踢脚线和装饰条 (增加细节) ---
-
-            const skirtingGeo = new THREE.BoxGeometry(1, 0.6, hallLength);
-
-            const skirtingMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.5 });
-
-           
-
-            const skLeft = new THREE.Mesh(skirtingGeo, skirtingMat);
-
-            skLeft.position.set(-hallWidth/2 + 0.5, 0.3, 0);
-
-            scene.add(skLeft);
-
-           
-
-            const skRight = new THREE.Mesh(skirtingGeo, skirtingMat);
-
-            skRight.position.set(hallWidth/2 - 0.5, 0.3, 0);
-
-            scene.add(skRight);
-
-
-
-            // --- 放置画作 (槽位) ---
-
-            // 参数: 图片URL (或颜色), 墙壁位置('left'/'right'/'back'), 沿墙坐标, 尺寸
-
-           
-
-            // 左墙画作
-
-            createPainting('https://picsum.photos/id/1015/800/1200', 'left', -15, 3, 4, "风景");
-
-            createPainting('https://picsum.photos/id/1016/1000/800', 'left', -5, 4, 3, "峡谷");
-
-            createPainting('https://picsum.photos/id/1003/800/800', 'left', 5, 3, 3, "鹿");
-
-            createPainting('https://picsum.photos/id/1025/600/900', 'left', 15, 2.5, 3.5, "森林");
-
-
-
-            // 右墙画作
-
-            createPainting('https://picsum.photos/id/237/800/1000', 'right', -15, 3, 4, "黑犬");
-
-            createPainting('https://picsum.photos/id/433/1000/700', 'right', -5, 4, 2.8, "肖像");
-
-            createPainting('https://picsum.photos/id/593/800/800', 'right', 5, 3, 3, "老虎");
-
-            createPainting('https://picsum.photos/id/659/600/900', 'right', 15, 2.5, 3.5, "雪狼");
-
-
-
-            // 尽头主画 (如蒙娜丽莎位)
-
-            createPainting('https://img.allhistory.com/5f0c1225a4188f0001a96678.jpg?imageView2/2/w/824/|imageMogr2/strip/interlace/1/quality/75/format/jpg', 'back', 0, 5, 7, "大师之作");
-
-            // 入口主画 (新增: 使用 'front' 墙壁位置)
-            createPainting('https://picsum.photos/id/1020/1200/1600', 'front', 0, 5, 7, "迎宾之作");
-
-            createBench(0, 0);
-
-            createBench(0, -15);
-
-            createBench(0, 15);
-
-        }
-
-
-
-        // ==========================================
-
-        // 4. 画作创建系统 (真实感核心)
-
-        // ==========================================
-
-        function createPainting(imageUrl, wallSide, zOffset, width, height, title) {
-
-            const group = new THREE.Group();
-
-           
-
-            // 1. 复杂金框 (使用多个几何体模拟雕花边框)
-
-            const frameColor = 0xcfaa56; // 沉稳的金色
-
-            const frameMat = new THREE.MeshStandardMaterial({
-
-                color: frameColor,
-
-                roughness: 0.3,
-
-                metalness: 0.8
-
-            });
-
-
-
-            // 外框
-
-            const frameThick = 0.2;
-
-            const frameDepth = 0.3;
-
-            const outerGeo = new THREE.BoxGeometry(width + frameThick*2, height + frameThick*2, frameDepth);
-
-            const outerFrame = new THREE.Mesh(outerGeo, frameMat);
-
-            outerFrame.castShadow = true;
-
-            group.add(outerFrame);
-
-
-
-            // 内衬 (画布背板)
-
-            const canvasGeo = new THREE.PlaneGeometry(width, height);
-
-           
-
-            // 加载纹理
-
-            const textureLoader = new THREE.TextureLoader();
-
-            // 如果图片加载失败，使用灰色代替
-
-            const texture = textureLoader.load(imageUrl,
-
-                function(tex) {
-
-                    tex.encoding = THREE.sRGBEncoding;
-
-                },
-
-                undefined,
-
-                function(err) { console.error("Error loading image"); }
-
-            );
-
-
-
-            const canvasMat = new THREE.MeshStandardMaterial({
-
-                map: texture,
-
-                roughness: 0.6,
-
-                color: 0xffffff
-
-            });
-
-           
-
-            const canvasMesh = new THREE.Mesh(canvasGeo, canvasMat);
-
-            canvasMesh.position.z = frameDepth/2 + 0.01; // 稍微突出一点
-
-            group.add(canvasMesh);
-
-
-
-            // 2. 专用照明 (博物馆重点照明)
-
-            const spotLight = new THREE.SpotLight(0xfff5e6, 2.5); // 暖白光
-
-            spotLight.angle = Math.PI / 6;
-
-            spotLight.penumbra = 0.5; // 边缘柔和
-
-            spotLight.decay = 2;
-
-            spotLight.distance = 20;
-
-            spotLight.castShadow = true;
-
-            spotLight.shadow.mapSize.width = 512;
-
-            spotLight.shadow.mapSize.height = 512;
-
-
-
-            // 定位画框和灯光
-
-            const hallWidth = 20;
-
-            const yPos = height/2 + 2; // 挂画高度
-
-
-
-            if (wallSide === 'left') {
-
-                group.position.set(-hallWidth/2 + 0.7, yPos, zOffset);
-
-                group.rotation.y = Math.PI / 2;
-
-               
-
-                // 灯光位置：天花板偏向画作一侧
-
-                spotLight.position.set(-hallWidth/2 + 5, 7, zOffset);
-
-                spotLight.target = canvasMesh;
-
-            } else if (wallSide === 'right') {
-
-                group.position.set(hallWidth/2 - 0.7, yPos, zOffset);
-
-                group.rotation.y = -Math.PI / 2;
-
-
-
-                spotLight.position.set(hallWidth/2 - 5, 7, zOffset);
-
-                spotLight.target = canvasMesh;
-
-            } else if (wallSide === 'back') {
-
-                group.position.set(0, yPos, -30 + 0.6); // -hallLength/2
-
-               
-
-                spotLight.position.set(0, 7, -20);
-
-                spotLight.target = canvasMesh;
-
-            }
-               else if (wallSide === 'front') { 
-                group.position.set(0, yPos, 30 - 0.6); // +hallLength/2 (30 是 hallLength/2)
-               
-                spotLight.position.set(0, 7, 20); // 灯光位置朝前
-                spotLight.target = canvasMesh;
-            }
-
-
-            scene.add(group);
-
-            scene.add(spotLight);
+            // 侧墙
+            const wallGeo = new THREE.PlaneGeometry(length, height - 2.5);
+            const leftWall = new THREE.Mesh(wallGeo, wallMat);
+            leftWall.position.set(-width/2, 2.5 + (height-2.5)/2, 0);
+            leftWall.rotation.y = Math.PI / 2;
+            leftWall.receiveShadow = true;
+            scene.add(leftWall);
+
+            const rightWall = new THREE.Mesh(wallGeo, wallMat);
+            rightWall.position.set(width/2, 2.5 + (height-2.5)/2, 0);
+            rightWall.rotation.y = -Math.PI / 2;
+            rightWall.receiveShadow = true;
+            scene.add(rightWall);
+
+            // 前后墙 (Back & Front)
+            const endWallGeo = new THREE.PlaneGeometry(width, height - 2.5);
             
+            // Back Wall (蒙娜丽莎侧)
+            const backWall = new THREE.Mesh(endWallGeo, wallMat);
+            backWall.position.set(0, 2.5 + (height-2.5)/2, -length/2);
+            scene.add(backWall);
 
-            // SpotLight target 必须也在场景中
+            // Front Wall (入口侧，加纳婚礼侧)
+            const frontWall = new THREE.Mesh(endWallGeo, wallMat);
+            frontWall.position.set(0, 2.5 + (height-2.5)/2, length/2);
+            frontWall.rotation.y = Math.PI; // 面向内部
+            scene.add(frontWall);
 
-            // 由于 target 是 canvasMesh，它是 group 的子元素，已经被添加到场景间接中
+            // 护墙板 (Wainscoting)
+            const wainscotMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.4 });
+            const addWainscot = (w, h, x, y, z, ry) => {
+                const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.4), wainscotMat);
+                m.position.set(x,y,z); m.rotation.y = ry; m.receiveShadow = true; scene.add(m);
+            };
+            addWainscot(length, 2.5, -width/2, 1.25, 0, Math.PI/2);
+            addWainscot(length, 2.5, width/2, 1.25, 0, -Math.PI/2);
+            addWainscot(width, 2.5, 0, 1.25, -length/2, 0);
+            addWainscot(width, 2.5, 0, 1.25, length/2, 0);
 
-            // 但 Threejs 有时需要手动更新
+            // 天窗 (Skylight)
+            const roofGeo = new THREE.CylinderGeometry(width/2, width/2, length, 32, 1, true, 0, Math.PI);
+            const roof = new THREE.Mesh(roofGeo, new THREE.MeshStandardMaterial({
+                map: TextureGen.createSkylight(), side: THREE.DoubleSide, transparent: true, opacity: 0.95
+            }));
+            roof.rotation.set(0, -Math.PI/2, Math.PI/2); // Z-up arch aligned to length
+            roof.position.set(0, height, 0);
+            scene.add(roof);
 
+            // 填补拱形缺口
+            const tymGeo = new THREE.CircleGeometry(width/2, 32, 0, Math.PI);
+            const tymMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, side: THREE.DoubleSide });
+            const tym1 = new THREE.Mesh(tymGeo, tymMat); tym1.position.set(0, height, -length/2); scene.add(tym1);
+            const tym2 = new THREE.Mesh(tymGeo, tymMat); tym2.position.set(0, height, length/2); tym2.rotation.y = Math.PI; scene.add(tym2);
         }
 
+        // ==========================================
+        // 4. 展品布置 (添加了入口画作)
+        // ==========================================
+        function setupExhibition() {
+            // 左墙 (Left)
+            createMasterpiece('https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Louis_XIV_of_France.jpg/800px-Louis_XIV_of_France.jpg', 'left', -20, 4, 5.5);
+            createMasterpiece('data:image/jpeg;base64,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', 'left', -8, 4, 5);
+            createMasterpiece('https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg/1280px-Sandro_Botticelli_-_La_nascita_di_Venere_-_Google_Art_Project_-_edited.jpg', 'left', 8, 6, 4);
+            createMasterpiece('data:image/jpeg;base64,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', 'left', 22, 6, 4.5);
 
+            // 右墙 (Right)
+            createMasterpiece('https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/JEAN_LOUIS_TH%C3%89ODORE_G%C3%89RICAULT_-_La_Radeau_de_la_M%C3%A9duse_%28Mus%C3%A9e_du_Louvre%29.jpg/1280px-JEAN_LOUIS_TH%C3%89ODORE_G%C3%89RICAULT_-_La_Radeau_de_la_M%C3%A9duse_%28Mus%C3%A9e_du_Louvre%29.jpg', 'right', -15, 7, 5);
+            createMasterpiece('https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/The_Fighting_Temeraire%2C_JMW_Turner%2C_National_Gallery.jpg/1280px-The_Fighting_Temeraire%2C_JMW_Turner%2C_National_Gallery.jpg', 'right', -2, 5, 4);
+            createMasterpiece('https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1280px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg', 'right', 10, 5, 4);
+            createMasterpiece('https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Jacques-Louis_David_-_The_Coronation_of_Napoleon_%281805-1807%29.jpg/1280px-Jacques-Louis_David_-_The_Coronation_of_Napoleon_%281805-1807%29.jpg', 'right', 25, 8, 5);
 
-        function createBench(x, z) {
+            // 尽头墙 (Back) - 蒙娜丽莎
+            createMasterpiece('https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/800px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg', 'back', 0, 3, 4.5);
 
-            const benchGroup = new THREE.Group();
+            // 【新增】入口墙 (Front) - 加纳的婚礼 (Veronese)
+            // 这幅画在现实卢浮宫中正对着蒙娜丽莎
+            createMasterpiece('https://m.media-amazon.com/images/I/71FWNAcBpQL._AC_UF894,1000_QL80_.jpg', 'front', 0, 8, 6);
 
-           
-
-            // 座垫 (红色天鹅绒)
-
-            const seatGeo = new THREE.BoxGeometry(2, 0.5, 4);
-
-            const seatMat = new THREE.MeshStandardMaterial({ color: 0x800000, roughness: 1.0 });
-
-            const seat = new THREE.Mesh(seatGeo, seatMat);
-
-            seat.position.y = 0.5;
-
-            seat.castShadow = true;
-
-            benchGroup.add(seat);
-
-
-
-            // 腿 (金色)
-
-            const legGeo = new THREE.BoxGeometry(1.8, 0.5, 3.8);
-
-            const legMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5 });
-
-            const leg = new THREE.Mesh(legGeo, legMat);
-
-            leg.position.y = 0.25;
-
-            benchGroup.add(leg);
-
-
-
-            benchGroup.position.set(x, 0, z);
-
-            scene.add(benchGroup);
-
+            // 长椅
+            createVelvetBench(0, -10);
+            createVelvetBench(0, 10);
         }
 
+        function createMasterpiece(url, side, offset, w, h) {
+            const group = new THREE.Group();
+            
+            // 1. 画框
+            const frameMat = new THREE.MeshStandardMaterial({ color: 0xcfaa56, roughness: 0.3, metalness: 0.9 });
+            const outerFrame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.6, h + 0.6, 0.2), frameMat);
+            group.add(outerFrame);
+            const innerFrame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.2, h + 0.2, 0.3), frameMat);
+            group.add(innerFrame);
 
+            // 2. 画布 (修复：使用配置了 crossOrigin 的 loader)
+            textureLoader.load(url, (tex) => {
+                tex.encoding = THREE.sRGBEncoding;
+                tex.minFilter = THREE.LinearFilter;
+                const canvas = new THREE.Mesh(
+                    new THREE.PlaneGeometry(w, h),
+                    new THREE.MeshStandardMaterial({ map: tex, roughness: 0.5 })
+                );
+                canvas.position.z = 0.16;
+                group.add(canvas);
+            });
 
-        // ==========================================
+            // 3. 射灯
+            const spot = new THREE.SpotLight(0xffeebb, 3.0); 
+            spot.angle = 0.5; spot.penumbra = 0.3; spot.decay = 2; spot.distance = 40;
+            spot.castShadow = true;
+            spot.shadow.mapSize.width = 1024; spot.shadow.mapSize.height = 1024;
 
-        // 5. 灯光系统
+            // 定位
+            const hallWidth = 24;
+            const hallLength = 70;
+            const yPos = 2.5 + (10-2.5)/2; // 墙面中心高度
 
-        // ==========================================
+            if (side === 'left') {
+                group.position.set(-hallWidth/2 + 0.4, yPos, offset);
+                group.rotation.y = Math.PI/2;
+                spot.position.set(0, 12, offset); 
+            } else if (side === 'right') {
+                group.position.set(hallWidth/2 - 0.4, yPos, offset);
+                group.rotation.y = -Math.PI/2;
+                spot.position.set(0, 12, offset);
+            } else if (side === 'back') {
+                group.position.set(0, yPos, -hallLength/2 + 0.4);
+                spot.position.set(0, 12, -hallLength/2 + 10);
+            } else if (side === 'front') {
+                // 新增：入口墙逻辑
+                group.position.set(0, yPos, hallLength/2 - 0.4); 
+                group.rotation.y = Math.PI; // 旋转180度面向房间
+                spot.position.set(0, 12, hallLength/2 - 10); // 灯光从前方打过去
+            }
 
-        function setupLighting() {
-
-            // 环境光 (基础亮度，偏冷色)
-
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
-
-            scene.add(ambientLight);
-
-
-
-            // 半球光 (模拟天光和地面的反光)
-
-            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
-
-            scene.add(hemiLight);
-
+            spot.target = group;
+            scene.add(group);
+            scene.add(spot);
         }
 
-
+        function createVelvetBench(x, z) {
+            const group = new THREE.Group();
+            const cushion = new THREE.Mesh(
+                new THREE.BoxGeometry(3, 0.6, 1.5),
+                new THREE.MeshStandardMaterial({ color: 0x660000, roughness: 1.0 })
+            );
+            cushion.position.y = 0.6; cushion.castShadow = true; group.add(cushion);
+            const legMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+            const addLeg = (lx, lz) => {
+                const l = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.6, 0.2), legMat);
+                l.position.set(lx, 0.3, lz); group.add(l);
+            };
+            addLeg(1.3, 0.6); addLeg(-1.3, 0.6); addLeg(1.3, -0.6); addLeg(-1.3, -0.6);
+            group.position.set(x, 0, z); scene.add(group);
+        }
 
         // ==========================================
-
-        // 6. 输入与物理控制
-
+        // 5. 灯光 & 交互
         // ==========================================
+        function setupAtmosphere() {
+            const ambient = new THREE.AmbientLight(0xffffff, 0.15);
+            scene.add(ambient);
+            const skyLight = new THREE.DirectionalLight(0xdbeeff, 0.5);
+            skyLight.position.set(5, 20, 5);
+            skyLight.castShadow = true;
+            scene.add(skyLight);
+        }
 
         function setupInputs() {
-
-            document.addEventListener('keydown', (event) => {
-
-                switch (event.code) {
-
-                    case 'ArrowUp': case 'KeyW': moveForward = true; break;
-
-                    case 'ArrowLeft': case 'KeyA': moveLeft = true; break;
-
-                    case 'ArrowDown': case 'KeyS': moveBackward = true; break;
-
-                    case 'ArrowRight': case 'KeyD': moveRight = true; break;
-
+            document.addEventListener('keydown', (e) => {
+                switch(e.code) {
+                    case 'KeyW': case 'ArrowUp': moveForward = true; break;
+                    case 'KeyA': case 'ArrowLeft': moveLeft = true; break;
+                    case 'KeyS': case 'ArrowDown': moveBackward = true; break;
+                    case 'KeyD': case 'ArrowRight': moveRight = true; break;
                 }
-
             });
-
-
-
-            document.addEventListener('keyup', (event) => {
-
-                switch (event.code) {
-
-                    case 'ArrowUp': case 'KeyW': moveForward = false; break;
-
-                    case 'ArrowLeft': case 'KeyA': moveLeft = false; break;
-
-                    case 'ArrowDown': case 'KeyS': moveBackward = false; break;
-
-                    case 'ArrowRight': case 'KeyD': moveRight = false; break;
-
+            document.addEventListener('keyup', (e) => {
+                switch(e.code) {
+                    case 'KeyW': case 'ArrowUp': moveForward = false; break;
+                    case 'KeyA': case 'ArrowLeft': moveLeft = false; break;
+                    case 'KeyS': case 'ArrowDown': moveBackward = false; break;
+                    case 'KeyD': case 'ArrowRight': moveRight = false; break;
                 }
-
             });
-
         }
-
-
 
         function onWindowResize() {
-
             camera.aspect = window.innerWidth / window.innerHeight;
-
             camera.updateProjectionMatrix();
-
             renderer.setSize(window.innerWidth, window.innerHeight);
-
         }
-
-
-
-        // ==========================================
-
-        // 7. 动画循环
-
-        // ==========================================
 
         function animate() {
-
             requestAnimationFrame(animate);
-
-
-
-            if (controls.isLocked === true) {
-
+            if (controls.isLocked) {
                 const time = performance.now();
-
                 const delta = (time - prevTime) / 1000;
-
-
-
-                // 阻尼效果 (停下来时有平滑减速)
-
-                velocity.x -= velocity.x * 10.0 * delta;
-
-                velocity.z -= velocity.z * 10.0 * delta;
-
-
-
+                velocity.x -= velocity.x * 8.0 * delta;
+                velocity.z -= velocity.z * 8.0 * delta;
                 direction.z = Number(moveForward) - Number(moveBackward);
-
                 direction.x = Number(moveRight) - Number(moveLeft);
-
                 direction.normalize();
-
-
-
-                // 移动速度 (博物馆步行速度，不要太快)
-
-                const speed = 40.0;
-
-                if (moveForward || moveBackward) velocity.z -= direction.z * speed * delta;
-
-                if (moveLeft || moveRight) velocity.x -= direction.x * speed * delta;
-
-
-
+                if (moveForward || moveBackward) velocity.z -= direction.z * 40.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * 40.0 * delta;
                 controls.moveRight(-velocity.x * delta);
-
                 controls.moveForward(-velocity.z * delta);
-
-
-
-                // 简单的边界限制 (防止走出房间)
-
-                const pos = controls.getObject().position;
-
-                if (pos.x < -9) pos.x = -9;
-
-                if (pos.x > 9) pos.x = 9;
-
-                if (pos.z < -29) pos.z = -29;
-
-                if (pos.z > 29) pos.z = 29;
-
             }
-
-
-
             prevTime = performance.now();
-
             renderer.render(scene, camera);
-
         }
 
-
-
-        // 启动
-
         init();
-
-
-
     </script>
-
 </body>
-
 </html>
