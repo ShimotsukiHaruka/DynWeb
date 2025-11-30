@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Louvre - Gypsum Sculpture Corridor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: 'Times New Roman', serif;
+        }
+        
+        #ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0,0,0,0.9);
+            color: #d4af37;
+            z-index: 999;
+            transition: opacity 0.5s;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 4rem;
+            letter-spacing: 5px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+        }
+        
+        h2 {
+            font-size: 1.2rem;
+            color: #888;
+            font-style: italic;
+            margin-bottom: 40px;
+        }
+
+        #start-btn {
+            padding: 15px 50px;
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid #d4af37;
+            color: #d4af37;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: serif;
+        }
+
+        #start-btn:hover {
+            background: #d4af37;
+            color: #000;
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.6);
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: rgba(255,255,255,0.4);
+            font-size: 0.9rem;
+            pointer-events: none;
+        }
+        
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.7);
+            z-index: 1000;
+            pointer-events: none;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="ui-layer">
+    <h1>Gypsum Sculpture Corridor</h1>
+    <h2>Final Stable Version (Light Tan Gypsum, Clear Lighting)</h2>
+    <button id="start-btn">ENTER EXHIBITION</button>
+</div>
+<div id="instructions">WASD Move | MOUSE Look | ESC Menu</div>
+<div id="crosshair"></div>
+
+<script>
+// 使用 IIFE (立即执行函数) 严格隔离变量
+(function() {
+    
+    // 关键 Three.js 实例变量
+    let scene, camera, renderer, controls;
+    const clock = new THREE.Clock(); 
+    
+    // 运动状态变量
+    let moveForward = false;
+    let moveBackward = false;
+    let moveLeft = false;
+    let moveRight = false;
+    
+    // 运动常量和向量
+    const velocity = new THREE.Vector3(); 
+    const direction = new THREE.Vector3(); 
+    const speed = 50.0;
+    
+    // 房间尺寸常量
+    const roomLength = 70; 
+    const roomWidth = 22;  
+    const roomHeight = 12; 
+
+    const footstepsSound = { isPlaying: false, play: () => { /* no-op */ }, pause: () => { /* no-op */ } };
+    
+    // ==========================================
+    // 材质定义
+    // ==========================================
+    const plasterColor = 0xD9C7A6; // 偏米黄色 (Light Tan/Beige)
+    
+    // 大理石/石膏材质
+    const marbleMaterial = new THREE.MeshPhysicalMaterial({
+        color: plasterColor,
+        metalness: 0.05, 
+        roughness: 0.15, 
+        clearcoat: 0.4,  
+        clearcoatRoughness: 0.08,
+        side: THREE.DoubleSide
+    });
+    
+    // 玻璃材质 (天窗)
+    const glassMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0xffffff,
+        metalness: 0,
+        roughness: 0.05,
+        transmission: 0.9,
+        transparent: true,
+        opacity: 0.8
+    });
+
+    // ==========================================
+    // 初始化
+    // ==========================================
+    function init() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf0f0f0); 
+        scene.fog = new THREE.Fog(0xf0f0f0, 1, 150);
+
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.y = 1.7; 
+        camera.position.z = 30;  
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
+        
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.8; 
+        
+        document.body.appendChild(renderer.domElement);
+
+        controls = new THREE.PointerLockControls(camera, document.body);
+        
+        // UI/Controls 事件
+        const startBtn = document.getElementById('start-btn');
+        const uiLayer = document.getElementById('ui-layer');
+        const crosshair = document.getElementById('crosshair');
+        
+        startBtn.addEventListener('click', () => controls.lock()); 
+
+        controls.addEventListener('lock', function () {
+            uiLayer.style.opacity = '0';
+            setTimeout(() => uiLayer.style.display = 'none', 500); 
+            crosshair.style.display = 'block';
+        });
+
+        controls.addEventListener('unlock', function () {
+            uiLayer.style.display = 'flex';
+            setTimeout(() => uiLayer.style.opacity = '1', 10); 
+            crosshair.style.display = 'none';
+        });
+
+        createScene();
+        setupEventListeners();
+        animate();
+    }
+
+    // ==========================================
+    // 辅助函数: 创建聚光灯 (不投射阴影)
+    // ==========================================
+    function addSpotlightToTarget(targetPosition) { 
+        const spotlightIntensity = 2.5;
+        const spotlightHeight = roomHeight + 5; 
+        const spotlightAngle = Math.PI / 8; 
+        const spotlightPenumbra = 0.5; 
+
+        const spotlight = new THREE.SpotLight(0xffffff, spotlightIntensity, 0, spotlightAngle, spotlightPenumbra);
+        spotlight.position.set(targetPosition.x, spotlightHeight, targetPosition.z);
+        
+        const targetObject = new THREE.Object3D(); 
+        targetObject.position.copy(targetPosition); 
+        scene.add(targetObject);
+        spotlight.target = targetObject;
+        
+        // 关闭聚光灯阴影以解决 MAX_TEXTURE_IMAGE_UNITS 错误
+        spotlight.castShadow = false;
+        
+        scene.add(spotlight);
+    }
+
+    // ==========================================
+    // 辅助函数: 生成棋盘格贴图
+    // ==========================================
+    function generateCheckerboardTexture(size = 64, dark = 0x9C886B, light = 0xD9C7A6) {
+        const canvas = document.createElement('canvas');
+        canvas.width = size * 2;
+        canvas.height = size * 2;
+        const context = canvas.getContext('2d');
+
+        // 绘制贴图
+        context.fillStyle = `#${dark.toString(16).padStart(6, '0')}`;
+        context.fillRect(0, 0, size * 2, size * 2);
+        
+        // 绘制白色格子
+        context.fillStyle = `#${light.toString(16).padStart(6, '0')}`;
+        context.fillRect(0, 0, size, size);
+        context.fillRect(size, size, size, size);
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.wrapS = THREE.RepeatWrapping; 
+        texture.wrapT = THREE.RepeatWrapping;
+        texture.repeat.set(roomWidth * 0.5, roomLength * 0.5); 
+        texture.anisotropy = renderer.capabilities.getMaxAnisotropy(); 
+        texture.colorSpace = THREE.SRGBColorSpace; 
+        
+        return texture;
+    }
+    
+    // ==========================================
+    // 场景创建
+    // ==========================================
+    function createScene() {
+        // --- 1. 光源：Grand Gallery 风格 ---
+        
+        // 1.1 环境光 (Ambient Light)
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3); 
+        scene.add(ambientLight);
+
+        // 1.2 半球光 (Hemisphere Light)
+        const hemiLight = new THREE.HemisphereLight(0xFFEEDD, plasterColor, 0.6); 
+        hemiLight.position.set(0, 50, 0);
+        scene.add(hemiLight);
+
+        // 1.3 主定向光 (Directional Light) - 核心光，唯一投射阴影的光源
+        const sunIntensity = 2.5; 
+        const sunLight = new THREE.DirectionalLight(0xFFFFFF, sunIntensity); 
+        sunLight.position.set(0, 30, 0); 
+        sunLight.target.position.set(0, 0, 0); 
+        scene.add(sunLight.target);
+        sunLight.castShadow = true;
+        
+        // 阴影设置
+        sunLight.shadow.mapSize.width = 1024; 
+        sunLight.shadow.mapSize.height = 1024;
+        sunLight.shadow.camera.near = 0.1;
+        sunLight.shadow.camera.far = 100;
+        sunLight.shadow.camera.left = -40; 
+        sunLight.shadow.camera.right = 40;
+        sunLight.shadow.camera.top = 40;
+        sunLight.shadow.camera.bottom = -40;
+        sunLight.shadow.bias = -0.0002; 
+        scene.add(sunLight);
+        
+        // --- 2. 建筑结构 ---
+        
+        // 地板
+        const checkerboardTexture = generateCheckerboardTexture();
+
+        const floorMaterial = new THREE.MeshStandardMaterial({ 
+            map: checkerboardTexture, 
+            color: 0xD9C7A6, 
+            roughness: 0.2,  
+            metalness: 0.1   
+        });
+        
+        const floorGeometry = new THREE.PlaneGeometry(roomWidth, roomLength);
+        
+        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        // 墙壁
+        const wallSideGeometry = new THREE.BoxGeometry(0.5, roomHeight, roomLength);
+        const endWallGeometry = new THREE.BoxGeometry(roomWidth, roomHeight, 0.5); 
+
+        // 左墙
+        const wallLeft = new THREE.Mesh(wallSideGeometry, marbleMaterial); 
+        wallLeft.position.set(-roomWidth / 2, roomHeight / 2, 0);
+        wallLeft.receiveShadow = true;
+        scene.add(wallLeft);
+        
+        // 右墙
+        const wallRight = new THREE.Mesh(wallSideGeometry, marbleMaterial); 
+        wallRight.position.set(roomWidth / 2, roomHeight / 2, 0);
+        wallRight.receiveShadow = true;
+        scene.add(wallRight);
+
+        // 后墙
+        const wallBack = new THREE.Mesh(endWallGeometry, marbleMaterial);
+        wallBack.position.set(0, roomHeight / 2, -roomLength / 2); 
+        wallBack.receiveShadow = true;
+        scene.add(wallBack);
+
+        // 前墙
+        const wallFront = new THREE.Mesh(endWallGeometry, marbleMaterial);
+        wallFront.position.set(0, roomHeight / 2, roomLength / 2); 
+        wallFront.receiveShadow = true;
+        scene.add(wallFront);
+
+
+        // 拱形天花板 (Barrel Vault)
+        const ARCH_RADIUS = roomWidth / 2; 
+        const vaultGeometry = new THREE.CylinderGeometry(
+            ARCH_RADIUS, ARCH_RADIUS, roomLength, 32, 1, true, 0, Math.PI
+        );
+        
+        const vaultStructure = new THREE.Mesh(vaultGeometry, marbleMaterial);
+        vaultStructure.rotation.set(0, -Math.PI/2, Math.PI/2); 
+        vaultStructure.position.y = roomHeight; 
+        vaultStructure.receiveShadow = true;
+        scene.add(vaultStructure);
+
+        // 拱顶末端/山墙
+        const tymGeo = new THREE.CircleGeometry(ARCH_RADIUS, 32, 0, Math.PI); 
+        
+        const tym1 = new THREE.Mesh(tymGeo, marbleMaterial);
+        tym1.position.set(0, roomHeight, -roomLength / 2); 
+        tym1.rotation.y = Math.PI; 
+        tym1.receiveShadow = true;
+        scene.add(tym1);
+
+        const tym2 = new THREE.Mesh(tymGeo, marbleMaterial);
+        tym2.position.set(0, roomHeight, roomLength / 2); 
+        tym2.receiveShadow = true;
+        scene.add(tym2);
+
+        // 中央天窗 (Skylight)
+        const skylightGeometry = new THREE.BoxGeometry(roomWidth * 0.5, 0.1, roomLength * 0.8);
+        const skylight = new THREE.Mesh(skylightGeometry, glassMaterial);
+        skylight.position.y = roomHeight + ARCH_RADIUS - 0.1; 
+        scene.add(skylight);
+
+        // ==========================================
+        // 核心改动：使用 GLTFLoader 加载螺旋柱模型
+        // ==========================================
+        
+        const loader = new THREE.GLTFLoader();
+        const columnCount = 7;
+        const columnSpacing = roomLength / columnCount;
+        const columnPositions = [];
+        const offsetX = -3.0;
+        const offsetX2 = -1.1; 
+        const offsetX3 = +1.1;
+        const offsetZ = +3.85; 
+        const degreeRotation = -2; // 负值表示顺时针旋转 2 度
+        const rotationY = degreeRotation * (Math.PI / 180); // 转换为弧度
+          
+
+        for (let i = 0; i < columnCount; i++) {
+            const zPos = 30 - i * columnSpacing; 
+            columnPositions.push(zPos);
+        }
+        
+        // 路径已修正为 'sculpture/my_column.gltf'
+        loader.load(
+            'sculpture/1/my_column.gltf', 
+            
+            function (gltf) {
+                console.log("模型加载成功！应用最终缩放和旋转调试。");
+                
+                const columnModel = gltf.scene;
+                
+                // **** 最终缩放修正：基于模型实际高度 2200 进行计算 ****
+                const TARGET_HEIGHT = roomHeight * 0.9; // 10.8
+                const ASSUMED_MODEL_HEIGHT = 2200.0; 
+                const scaleFactor = TARGET_HEIGHT / ASSUMED_MODEL_HEIGHT; // 约 0.0049
+                
+                // 统一设置材质、阴影和纹理属性
+                columnModel.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                        child.material = marbleMaterial; 
+                    }
+                });
+
+                // 实例化柱子并放置到场景中
+                columnPositions.forEach(zPos => {
+                    
+                    const yPos = 10.8; 
+                    
+                    // 左侧柱子：应用旋转修正
+                    const colLeft = columnModel.clone();
+                    colLeft.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                    colLeft.position.set(-roomWidth / 3 + offsetX, yPos, zPos + offsetZ); 
+                    colLeft.rotation.y = rotationY;
+                    scene.add(colLeft);
+
+                    // 右侧柱子：不应用旋转，用于对比
+                    const colRight = columnModel.clone();
+                    colRight.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                    colRight.position.set(roomWidth / 3 + offsetX, yPos, zPos + offsetZ);
+                    colRight.rotation.y = rotationY;
+                    scene.add(colRight);
+                });
+            },
+            
+            undefined, 
+            function (error) {
+                console.error('模型加载失败，请检查路径和服务器状态:', error);
+            }
+        );
+        // ==========================================
+        // GLTFLoader 加载代码结束
+        // ==========================================
+
+
+// --- 3. 雕塑群 (带聚光灯) ---
+
+        // 移除了未使用的 createSculpture 和 createLyingSculpture 函数
+
+        // ==========================================
+        // 中央雕塑（维纳斯）
+        // ==========================================
+        { // 块级作用域，用于隔离 const 变量
+            // --- 配置参数 ---
+            const BASE_HEIGHT = 1.0; 
+            const TARGET_HEIGHT_VENUS = 2.5; 
+            const ASSUMED_MODEL_HEIGHT = 2.2; 
+            
+            // 修正缩放系数 (根据您提供的 DEBUG_SCALE_MULTIPLIER = 0.001)
+            const DEBUG_SCALE_MULTIPLIER = 0.001 
+            const scaleFactor = (TARGET_HEIGHT_VENUS / ASSUMED_MODEL_HEIGHT) * DEBUG_SCALE_MULTIPLIER; 
+
+            // 默认位置在长廊中心
+            const venusPosition = new THREE.Vector3(0, 0, -32); 
+
+            // --- 1. 创建底座 ---
+            const venusGroup = new THREE.Group();
+            const baseGeometry = new THREE.BoxGeometry(1.5, BASE_HEIGHT, 1.5); 
+            const baseMesh = new THREE.Mesh(baseGeometry, marbleMaterial); 
+
+            baseMesh.position.y = BASE_HEIGHT / 2; 
+            baseMesh.castShadow = true;
+            baseMesh.receiveShadow = true;
+            venusGroup.add(baseMesh);
+
+            // 设置整个组的位置并添加到场景
+            venusGroup.position.set(venusPosition.x, venusPosition.y, venusPosition.z);
+            scene.add(venusGroup);
+
+            // --- 2. 异步加载维纳斯模型 ---
+            loader.load(
+                'sculpture/2/venus.gltf', 
+                
+                function (gltf) {
+                    console.log("中央维纳斯模型加载成功，正在放置。");
+                    
+                    const venusModel = gltf.scene;
+                    
+                    venusModel.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                            child.material = marbleMaterial; 
+                        }
+                    });
+
+                    venusModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
+                    
+                    const Y_POS_ON_BASE = BASE_HEIGHT; 
+                    venusModel.position.set(0, Y_POS_ON_BASE, 0); 
+                    
+                    const spotlightTargetY = BASE_HEIGHT + (TARGET_HEIGHT_VENUS * DEBUG_SCALE_MULTIPLIER) / 2; 
+
+                    venusGroup.add(venusModel);
+                    
+                    addSpotlightToTarget(new THREE.Vector3(
+                        venusPosition.x, 
+                        spotlightTargetY, 
+                        venusPosition.z
+                    ));
+                },
+                
+                undefined, 
+                
+                function (error) {
+                    console.error('中央维纳斯模型加载失败:', error);
+                }
+            );
+        } // 维纳斯块级作用域结束
+
+        
+
+// ==========================================
+// 沿墙布置 (只保留 Z=25 处的浮雕) - 已移除底座
+// ==========================================
+const sideObjectsZ = [25, 15, 5, -5, -15, -25];
+
+sideObjectsZ.forEach(z => {
+    
+    // 左侧展品 (所有半身像代码已被删除)
+    // 右侧展品 (只在 Z=25 加载浮雕)
+    if (z === 25) {
+        
+        // --- 配置参数 (浮雕) ---
+        const FRIEZE_WIDTH = 1.2; // 您的修改：宽度设为 1.0
+        const FRIEZE_HEIGHT = 1.0; 
+        const ASSUMED_MODEL_LENGTH = 10.0; 
+        const scaleFactorFrieze = FRIEZE_WIDTH / ASSUMED_MODEL_LENGTH; 
+
+        // 浮雕组的高度现在是固定的 2.5 (适合挂在墙上)
+        const DISPLAY_Y_HEIGHT = 2.5; 
+        const friezePosition = new THREE.Vector3(roomWidth / 2 - 3, DISPLAY_Y_HEIGHT, 25.5);
+        
+        // --- 1. 浮雕组 ---
+        const friezeGroup = new THREE.Group();
+
+        // **已移除创建底座的代码**
+
+        friezeGroup.position.set(friezePosition.x, friezePosition.y, friezePosition.z);
+        scene.add(friezeGroup);
+        
+        // --- 2. 异步加载浮雕模型 ---
+        loader.load(
+            'sculpture/4/parthenon_frieze.gltf', 
+            
+            function (gltf) {
+                const friezeModel = gltf.scene;
+                
+                friezeModel.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                        // 强制使用场景材质以解决纹理加载错误
+                        child.material = marbleMaterial; 
+                    }
+                });
+
+                friezeModel.scale.set(scaleFactorFrieze, scaleFactorFrieze, scaleFactorFrieze);
+                
+                // 设置旋转：180度 + 90度逆时针旋转
+                friezeModel.rotation.y = Math.PI + (Math.PI / 2); 
+                
+                // 直接放置在 Group 的 Y=0 位置 (Group 的位置已设置为 DISPLAY_Y_HEIGHT)
+                friezeModel.position.set(0, 0, 0); 
+                
+                const spotlightTargetY = DISPLAY_Y_HEIGHT; 
+
+                friezeGroup.add(friezeModel);
+                
+                addSpotlightToTarget(new THREE.Vector3(
+                    friezePosition.x, 
+                    spotlightTargetY, 
+                    friezePosition.z
+                ));
+            },
+            
+            undefined, 
+            
+            function (error) {
+                console.error('浮雕模型加载失败:', error);
+            }
+        );
+    } 
+    // Z != 25 时，此侧自动跳过，不创建任何物体。
+});
+// ==========================================
+// >>>>>>>>>> 此处是胜利女神代码的插入点 <<<<<<<<<<
+// ==========================================
+// 右侧 Z=-25 展品 (萨莫特拉斯的胜利女神)
+// ==========================================
+// 确保只在 Z=-25 的位置创建
+if (sideObjectsZ.includes(-25)) { 
+    
+    // --- 配置参数 ---
+    const TARGET_HEIGHT_NIKE = 5.5; // 雕塑本身的预期高度 (含底座，但现在没有底座)
+    const ASSUMED_MODEL_HEIGHT_NIKE = 6.0; // 假设模型自身高度
+    
+    // 采用您调整后的缩放乘数。注意：0.01 仍然很小，如果雕塑仍看不到，请考虑将此乘数改为 1.0。
+    const DEBUG_SCALE_MULTIPLIER = 0.03;
+    const scaleFactorNike = (TARGET_HEIGHT_NIKE / ASSUMED_MODEL_HEIGHT_NIKE) * DEBUG_SCALE_MULTIPLIER; 
+
+    // 放置位置：右侧 (roomWidth / 2 - 3)，Z = -23
+    const nikePosition = new THREE.Vector3(roomWidth / 2 - 4.0, 0, -27); 
+
+    // --- 1. 创建模型组 (不再创建底座 Mesh) ---
+    const nikeGroup = new THREE.Group();
+    
+    // 直接设置组的位置并添加到场景
+    // 雕塑将直接放置在 Y=0 的地面上
+    nikeGroup.position.set(nikePosition.x, nikePosition.y, nikePosition.z);
+    scene.add(nikeGroup);
+
+    // --- 2. 异步加载胜利女神模型 ---
+    loader.load(
+        'sculpture/3/nike_of_samothrace.gltf', 
+        
+        function (gltf) {
+            console.log("右侧胜利女神模型加载成功，正在放置。");
+            
+            const nikeModel = gltf.scene;
+            
+            // 统一设置材质、阴影和纹理属性
+            nikeModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    child.material = marbleMaterial; 
+                }
+            });
+
+            // 缩放
+            nikeModel.scale.set(scaleFactorNike, scaleFactorNike, scaleFactorNike);
+            
+            // **放置在地面上 (Y=0)**
+            // 雕塑模型通常以底部为 Y=0 或 Y=负值。我们假设模型原点在底部。
+            const Y_POS_ON_BASE = 0; 
+            nikeModel.position.set(0, Y_POS_ON_BASE, 0); 
+            
+            // 旋转：采用您调整后的 180 度旋转
+            nikeModel.rotation.y = Math.PI + (Math.PI / 2) + (Math.PI / 18); // Math.PI / 2 + (Math.PI / 2) = Math.PI (180度)
+
+            // 聚光灯目标 Y 坐标：基于地面高度 + 雕塑缩放后的半高
+            const scaledHeight = TARGET_HEIGHT_NIKE * DEBUG_SCALE_MULTIPLIER;
+            const spotlightTargetY = scaledHeight / 2; 
+            const NIKE_OFFSET_X = -0.5;
+            const NIKE_OFFSET_Z = 2.0;
+            nikeGroup.add(nikeModel);
+            
+            // 添加聚光灯
+            addSpotlightToTarget(new THREE.Vector3(
+                nikePosition.x, 
+                spotlightTargetY, 
+                nikePosition.z + NIKE_OFFSET_Z
+            ));
+        },
+        
+        undefined, 
+        
+        function (error) {
+            console.error('胜利女神模型加载失败:', error);
+        }
+    );
+}
+// ==========================================
+// 胜利女神加载代码结束
+// ==========================================
+// ==========================================
+// 胜利女神加载代码结束
+// ==========================================
+    } // <--- 这是 createScene() 函数的结束括号   
+
+
+// ==========================================
+    // ==========================================
+    // 动画循环
+    // ==========================================
+    function animate() {
+        requestAnimationFrame(animate);
+
+        const delta = clock.getDelta();
+
+        if (controls.isLocked) {
+            
+            velocity.x -= velocity.x * 10.0 * delta;
+            velocity.z -= velocity.z * 10.0 * delta;
+
+            direction.z = Number(moveForward) - Number(moveBackward);
+            direction.x = Number(moveRight) - Number(moveLeft);
+            direction.normalize(); 
+
+            if (moveForward || moveBackward) velocity.z -= direction.z * speed * delta;
+            if (moveLeft || moveRight) velocity.x -= direction.x * speed * delta;
+
+            controls.moveRight(-velocity.x * delta);
+            controls.moveForward(-velocity.z * delta);
+
+            const pos = controls.getObject().position;
+
+            if (pos.x < -10) pos.x = -10;
+            if (pos.x > 10) pos.x = 10;
+
+            if (pos.z < -34) pos.z = -34;
+            if (pos.z > 34) pos.z = 34;
+        }
+        
+        renderer.render(scene, camera);
+    }
+
+    // ==========================================
+    // 事件监听器
+    // ==========================================
+    function setupEventListeners() {
+        const onKeyDown = function (event) {
+            switch (event.code) {
+                case 'KeyW':
+                case 'ArrowUp':
+                    moveForward = true;
+                    break;
+                case 'KeyA':
+                case 'ArrowLeft':
+                    moveLeft = true;
+                    break;
+                case 'KeyS':
+                case 'ArrowDown':
+                    moveBackward = true;
+                    break;
+                case 'KeyD':
+                case 'ArrowRight':
+                    moveRight = true;
+                    break;
+            }
+        };
+
+        const onKeyUp = function (event) {
+            switch (event.code) {
+                case 'KeyW':
+                case 'ArrowUp':
+                    moveForward = false;
+                    break;
+                case 'KeyA':
+                case 'ArrowLeft':
+                    moveLeft = false;
+                    break;
+                case 'KeyS':
+                case 'ArrowDown':
+                    moveBackward = false;
+                    break;
+                case 'KeyD':
+                case 'ArrowRight':
+                    moveRight = false;
+                    break;
+            }
+        };
+
+        document.addEventListener('keydown', onKeyDown);
+        document.addEventListener('keyup', onKeyUp);
+        
+        window.addEventListener('resize', onWindowResize);
+    }
+    
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // ==========================================
+    // 启动
+    // ==========================================
+    init();
+
+})(); 
+</script>
+
+</body>
+</html>
