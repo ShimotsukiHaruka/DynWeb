@@ -370,11 +370,11 @@
         const columnCount = 7;
         const columnSpacing = roomLength / columnCount;
         const columnPositions = [];
-        const offsetX = -3.0;
+        const offsetX = -0.0;
         const offsetX2 = -1.1; 
         const offsetX3 = +1.1;
-        const offsetZ = +3.85; 
-        const degreeRotation = -2; // 负值表示顺时针旋转 2 度
+        const offsetZ = +0.0; 
+        const degreeRotation = -0; // 负值表示顺时针旋转 2 度
         const rotationY = degreeRotation * (Math.PI / 180); // 转换为弧度
           
 
@@ -385,7 +385,7 @@
         
         // 路径已修正为 'sculpture/my_column.gltf'
         loader.load(
-            'sculpture/1/my_column.gltf', 
+            'sculpture/1/scene.gltf', 
             
             function (gltf) {
                 console.log("模型加载成功！应用最终缩放和旋转调试。");
@@ -394,7 +394,7 @@
                 
                 // **** 最终缩放修正：基于模型实际高度 2200 进行计算 ****
                 const TARGET_HEIGHT = roomHeight * 0.9; // 10.8
-                const ASSUMED_MODEL_HEIGHT = 2200.0; 
+                const ASSUMED_MODEL_HEIGHT = 110.0; 
                 const scaleFactor = TARGET_HEIGHT / ASSUMED_MODEL_HEIGHT; // 约 0.0049
                 
                 // 统一设置材质、阴影和纹理属性
@@ -409,7 +409,7 @@
                 // 实例化柱子并放置到场景中
                 columnPositions.forEach(zPos => {
                     
-                    const yPos = 10.8; 
+                    const yPos = 0; 
                     
                     // 左侧柱子：应用旋转修正
                     const colLeft = columnModel.clone();
@@ -451,7 +451,7 @@
             const ASSUMED_MODEL_HEIGHT = 2.2; 
             
             // 修正缩放系数 (根据您提供的 DEBUG_SCALE_MULTIPLIER = 0.001)
-            const DEBUG_SCALE_MULTIPLIER = 0.001 
+            const DEBUG_SCALE_MULTIPLIER = 0.002 
             const scaleFactor = (TARGET_HEIGHT_VENUS / ASSUMED_MODEL_HEIGHT) * DEBUG_SCALE_MULTIPLIER; 
 
             // 默认位置在长廊中心
@@ -459,7 +459,7 @@
 
             // --- 1. 创建底座 ---
             const venusGroup = new THREE.Group();
-            const baseGeometry = new THREE.BoxGeometry(1.5, BASE_HEIGHT, 1.5); 
+            const baseGeometry = new THREE.BoxGeometry(2.0, BASE_HEIGHT, 2.0); 
             const baseMesh = new THREE.Mesh(baseGeometry, marbleMaterial); 
 
             baseMesh.position.y = BASE_HEIGHT / 2; 
@@ -600,11 +600,11 @@ if (sideObjectsZ.includes(-25)) {
     const ASSUMED_MODEL_HEIGHT_NIKE = 6.0; // 假设模型自身高度
     
     // 采用您调整后的缩放乘数。注意：0.01 仍然很小，如果雕塑仍看不到，请考虑将此乘数改为 1.0。
-    const DEBUG_SCALE_MULTIPLIER = 0.03;
+    const DEBUG_SCALE_MULTIPLIER = 0.035;
     const scaleFactorNike = (TARGET_HEIGHT_NIKE / ASSUMED_MODEL_HEIGHT_NIKE) * DEBUG_SCALE_MULTIPLIER; 
 
     // 放置位置：右侧 (roomWidth / 2 - 3)，Z = -23
-    const nikePosition = new THREE.Vector3(roomWidth / 2 - 4.0, 0, -27); 
+    const nikePosition = new THREE.Vector3(roomWidth / 2 - 5.5, 0, -27.5); 
 
     // --- 1. 创建模型组 (不再创建底座 Mesh) ---
     const nikeGroup = new THREE.Group();
@@ -646,13 +646,13 @@ if (sideObjectsZ.includes(-25)) {
             // 聚光灯目标 Y 坐标：基于地面高度 + 雕塑缩放后的半高
             const scaledHeight = TARGET_HEIGHT_NIKE * DEBUG_SCALE_MULTIPLIER;
             const spotlightTargetY = scaledHeight / 2; 
-            const NIKE_OFFSET_X = -0.5;
+            const NIKE_OFFSET_X = 3.5;
             const NIKE_OFFSET_Z = 2.0;
             nikeGroup.add(nikeModel);
             
             // 添加聚光灯
             addSpotlightToTarget(new THREE.Vector3(
-                nikePosition.x, 
+                nikePosition.x + NIKE_OFFSET_X, 
                 spotlightTargetY, 
                 nikePosition.z + NIKE_OFFSET_Z
             ));
@@ -665,12 +665,148 @@ if (sideObjectsZ.includes(-25)) {
         }
     );
 }
-// ==========================================
-// 胜利女神加载代码结束
-// ==========================================
-// ==========================================
-// 胜利女神加载代码结束
-// ==========================================
+{ 
+    
+    // --- 配置参数 ---
+    const TARGET_HEIGHT_DAVID = 5.2; // 雕塑本身的预期高度
+    const ASSUMED_MODEL_HEIGHT_DAVID = 4.0; // 假设模型自身高度
+    
+    // 采用与胜利女神相同的缩放乘数。
+    const DEBUG_SCALE_MULTIPLIER_DAVID = 0.5;
+    const scaleFactorDavid = (TARGET_HEIGHT_DAVID / ASSUMED_MODEL_HEIGHT_DAVID) * DEBUG_SCALE_MULTIPLIER_DAVID; 
+
+    // 放置位置：左侧 (roomWidth / 2 - 4.0)，Z = 32.5 (靠近入口)
+    const davidPosition = new THREE.Vector3(-roomWidth / 2 - 7.5, -0.25, -24.3); 
+
+    // --- 1. 创建模型组 ---
+    const davidGroup = new THREE.Group();
+    davidGroup.position.set(davidPosition.x, davidPosition.y, davidPosition.z);
+    scene.add(davidGroup);
+
+    // --- 2. 异步加载大卫模型 ---
+    // 假设模型路径为 'sculpture/5/David.gltf'
+    loader.load(
+        'sculpture/5/David.gltf', 
+        
+        function (gltf) {
+            console.log("左侧大卫模型加载成功，正在放置。");
+            
+            const davidModel = gltf.scene;
+            
+            // 统一设置材质、阴影和纹理属性
+            davidModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    child.material = marbleMaterial; 
+                }
+            });
+
+            // 缩放
+            davidModel.scale.set(scaleFactorDavid, scaleFactorDavid, scaleFactorDavid);
+            
+            // 放置在地面上 (Y=0)
+            const Y_POS_ON_BASE = 0; 
+            davidModel.position.set(0, Y_POS_ON_BASE, 0); 
+            
+            // 旋转：面向中央走道 (朝右侧看) - 逆时针 90 度
+            davidModel.rotation.y = Math.PI / 2;
+
+            davidGroup.add(davidModel);
+            
+// 1. 计算缩放后的实际高度
+            const scaledHeight = TARGET_HEIGHT_DAVID * DEBUG_SCALE_MULTIPLIER_DAVID; 
+            
+            // 2. 修正：将雕像组的 Y 坐标 (davidPosition.y = -0.25) 加入到目标计算中
+            const spotlightTargetY = davidPosition.y + (scaledHeight / 2); 
+            // 修正后目标 Y 坐标为: -0.25 + (2.6 / 2) = 1.05
+
+            // 添加聚光灯
+            addSpotlightToTarget(new THREE.Vector3(
+                davidPosition.x + 9.5, 
+                spotlightTargetY, // 使用修正后的 Y 坐标
+                davidPosition.z 
+            ));
+        },
+        
+        undefined, 
+        
+        function (error) {
+            console.error('大卫模型加载失败:', error);
+        }
+    );
+}
+{ 
+    
+    // --- 配置参数 ---
+    const TARGET_HEIGHT_DAVID = 5.2; // 雕塑本身的预期高度
+    const ASSUMED_MODEL_HEIGHT_DAVID = 4.0; // 假设模型自身高度
+    
+    // 采用与胜利女神相同的缩放乘数。
+    const DEBUG_SCALE_MULTIPLIER_DAVID = 0.15;
+    const scaleFactorDavid = (TARGET_HEIGHT_DAVID / ASSUMED_MODEL_HEIGHT_DAVID) * DEBUG_SCALE_MULTIPLIER_DAVID; 
+
+    // 放置位置：左侧 (roomWidth / 2 - 4.0)，Z = 32.5 (靠近入口)
+    const davidPosition = new THREE.Vector3(roomWidth / 2 - 0.2, 3, -14.5); 
+
+    // --- 1. 创建模型组 ---
+    const davidGroup = new THREE.Group();
+    davidGroup.position.set(davidPosition.x, davidPosition.y, davidPosition.z);
+    scene.add(davidGroup);
+
+    // --- 2. 异步加载父兄模型 ---
+    // 假设模型路径为 'sculpture/5/David.gltf'
+    loader.load(
+        'sculpture/6/scene.gltf', 
+        
+        function (gltf) {
+            console.log("右侧父兄模型加载成功，正在放置。");
+            
+            const davidModel = gltf.scene;
+            
+            // 统一设置材质、阴影和纹理属性
+            davidModel.traverse((child) => {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    child.material = marbleMaterial; 
+                }
+            });
+
+            // 缩放
+            davidModel.scale.set(scaleFactorDavid, scaleFactorDavid, scaleFactorDavid);
+            
+            // 放置在地面上 (Y=0)
+            const Y_POS_ON_BASE = 0; 
+            davidModel.position.set(0, Y_POS_ON_BASE, 0); 
+            
+            // 旋转：面向中央走道 (朝右侧看) - 逆时针 90 度
+            davidModel.rotation.y = - Math.PI / 2;
+
+            davidGroup.add(davidModel);
+            
+// 1. 计算缩放后的实际高度
+            const scaledHeight = TARGET_HEIGHT_DAVID * DEBUG_SCALE_MULTIPLIER_DAVID; 
+            
+            // 2. 修正：将雕像组的 Y 坐标 (davidPosition.y = -0.25) 加入到目标计算中
+            const spotlightTargetY = davidPosition.y + (scaledHeight / 2); 
+            // 修正后目标 Y 坐标为: -0.25 + (2.6 / 2) = 1.05
+
+            // 添加聚光灯
+            addSpotlightToTarget(new THREE.Vector3(
+                davidPosition.x -1.5, 
+                spotlightTargetY, // 使用修正后的 Y 坐标
+                davidPosition.z 
+            ));
+        },
+        
+        undefined, 
+        
+        function (error) {
+            console.error('父兄模型加载失败:', error);
+        }
+    );
+}
     } // <--- 这是 createScene() 函数的结束括号   
 
 
