@@ -58,7 +58,7 @@ Designed with a warm, gold-accented UI, this scene focuses on 2D art masterpiece
 <img width="2147" height="1325" alt="1" src="https://github.com/user-attachments/assets/9427dafc-15b9-4400-abd4-1ed3434384c0" />
 <img width="2559" height="1439" alt="2" src="https://github.com/user-attachments/assets/7740d6ad-be0d-426e-bad1-f28380435b6f" />
 
-This scene features a "Dark Mode" aesthetic with spotlighting on 3D sculptures. It demonstrates the ability to load and render complex 3D geometry (`.gltf` / `.glb`) within a web environment.
+This scene features a "Light Mode" aesthetic with spotlighting on 3D sculptures. It demonstrates the ability to load and render complex 3D geometry (`.gltf` / `.glb`) within a web environment.
 
 ## 📜 License
 
