@@ -59,5 +59,5 @@ This scene features a "Dark Mode" aesthetic with spotlighting on 3D sculptures. 
 
 ## 📜 License
 
-This project is created for educational and portfolio purposes. The artworks featured are digital representations of public domain pieces.
+MIT
 
