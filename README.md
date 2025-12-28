@@ -50,10 +50,13 @@ You don't need to install any heavy software. A modern web browser (Chrome, Fire
 ## 🏛️ Gallery Previews
 
 ### 1. The Grand Gallery (`Grand Gallery.html`)
+<img width="2559" height="1439" alt="3" src="https://github.com/user-attachments/assets/4afd93a8-a049-41c0-aae1-95a4eb2bad21" />
 
 Designed with a warm, gold-accented UI, this scene focuses on 2D art masterpieces. It uses custom texture mapping to recreate the feeling of walking through the Louvre's most famous wing.
 
 ### 2. Gypsum Sculpture Corridor (`Green.html`)
+<img width="2147" height="1325" alt="1" src="https://github.com/user-attachments/assets/9427dafc-15b9-4400-abd4-1ed3434384c0" />
+<img width="2559" height="1439" alt="2" src="https://github.com/user-attachments/assets/7740d6ad-be0d-426e-bad1-f28380435b6f" />
 
 This scene features a "Dark Mode" aesthetic with spotlighting on 3D sculptures. It demonstrates the ability to load and render complex 3D geometry (`.gltf` / `.glb`) within a web environment.
 
